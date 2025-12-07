@@ -17,7 +17,7 @@ export default function TrendingPage() {
                     <Flame className="w-8 h-8 text-primary" />
                     Trending
                 </h1>
-                <p className="text-gray-400 mt-1">Discover what's hot in your niche</p>
+                <p className="text-gray-400 mt-1">Discover what&apos;s hot in your niche</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
