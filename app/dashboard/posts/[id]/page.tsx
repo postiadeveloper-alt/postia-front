@@ -133,7 +133,7 @@ export default function PostDetailPage() {
                     <div className="glass-card p-6">
                         <h3 className="text-lg font-semibold mb-4">Caption</h3>
                         <p className="text-gray-300 whitespace-pre-wrap">
-                            {post.caption || 'No caption'}
+                            {post.content || post.title || 'No caption'}
                         </p>
                     </div>
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import apiService from '@/lib/api.service';
-import { Upload, Calendar, Clock, Image as ImageIcon, Video } from 'lucide-react';
+import { Upload, Calendar, Clock, Image as ImageIcon, Video, Send } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
@@ -15,6 +15,7 @@ export default function CreatePostPage() {
     const [scheduledTime, setScheduledTime] = useState('');
     const [mediaFiles, setMediaFiles] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
+    const [postingNow, setPostingNow] = useState(false);
 
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState<string>('');
@@ -48,6 +49,24 @@ export default function CreatePostPage() {
         return 'image';
     };
 
+    const uploadMediaFiles = async (): Promise<string[]> => {
+        const mediaUrls: string[] = [];
+        for (const file of mediaFiles) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const uploadResult = await apiService.uploadMedia(formData);
+            // Backend returns { success: true, data: { url: ... } }
+            const url = uploadResult.data?.url || uploadResult.url;
+            if (url) {
+                mediaUrls.push(url);
+            } else {
+                console.error('Upload response missing URL:', uploadResult);
+                throw new Error('Failed to get URL from upload response');
+            }
+        }
+        return mediaUrls;
+    };
+
     const handleSubmit = async () => {
         if (!selectedAccountId) {
             alert('Please connect an Instagram account first');
@@ -57,15 +76,10 @@ export default function CreatePostPage() {
         setLoading(true);
         try {
             // Upload media first
-            const mediaUrls: string[] = [];
-            for (const file of mediaFiles) {
-                const formData = new FormData();
-                formData.append('file', file);
-                const uploadResult = await apiService.uploadMedia(formData);
-                mediaUrls.push(uploadResult.url);
-            }
+            const mediaUrls = await uploadMediaFiles();
 
             // Create post with backend DTO structure
+            // Set status to 'scheduled' when a schedule date is provided
             const postData = {
                 title: caption.slice(0, 50) || 'New Post', // Backend requires title
                 content: caption,
@@ -76,6 +90,7 @@ export default function CreatePostPage() {
                     : new Date().toISOString(), // Default to now if not scheduled
                 instagramAccountId: selectedAccountId,
                 hashtags: caption.match(/#[a-z0-9_]+/gi)?.join(' ') || '',
+                status: scheduledDate && scheduledTime ? 'scheduled' : 'draft',
             };
 
             console.log('Creating post with data:', postData);
@@ -86,6 +101,54 @@ export default function CreatePostPage() {
             alert(error.response?.data?.message || 'Failed to create post. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePostNow = async () => {
+        if (!selectedAccountId) {
+            alert('Please connect an Instagram account first');
+            return;
+        }
+
+        if (mediaFiles.length === 0) {
+            alert('Please upload at least one media file');
+            return;
+        }
+
+        setPostingNow(true);
+        try {
+            // Upload media first
+            const mediaUrls = await uploadMediaFiles();
+            console.log('Media uploaded:', mediaUrls);
+
+            // Create post with current time and status draft (it will be published immediately)
+            const postData = {
+                title: caption.slice(0, 50) || 'New Post',
+                content: caption,
+                type: getPostType(mediaFiles),
+                mediaUrls,
+                scheduledAt: new Date().toISOString(),
+                instagramAccountId: selectedAccountId,
+                hashtags: caption.match(/#[a-z0-9_]+/gi)?.join(' ') || '',
+                status: 'draft', // Will be changed by publish
+            };
+
+            console.log('Creating post for immediate publishing:', postData);
+            const createdPost = await apiService.createPost(postData);
+            console.log('Post created:', createdPost);
+
+            // Immediately publish the post
+            console.log('Publishing post now...');
+            await apiService.publishPostNow(createdPost.id);
+
+            alert('🎉 Post published successfully to Instagram!');
+            router.push('/dashboard/calendar');
+        } catch (error: any) {
+            console.error('Failed to post now:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to publish post';
+            alert(`❌ Failed to publish: ${errorMessage}`);
+        } finally {
+            setPostingNow(false);
         }
     };
 
@@ -217,11 +280,31 @@ export default function CreatePostPage() {
                     <div className="space-y-3">
                         <Button
                             onClick={handleSubmit}
-                            disabled={loading || mediaFiles.length === 0}
+                            disabled={loading || postingNow || mediaFiles.length === 0}
                             className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3"
                         >
                             {loading ? 'Creating...' : scheduledDate ? 'Schedule Post' : 'Save as Draft'}
                         </Button>
+
+                        {/* Post Now Button - for immediate publishing */}
+                        <Button
+                            onClick={handlePostNow}
+                            disabled={postingNow || loading || mediaFiles.length === 0}
+                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 flex items-center justify-center gap-2"
+                        >
+                            {postingNow ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Publishing to Instagram...
+                                </>
+                            ) : (
+                                <>
+                                    <Send className="w-4 h-4" />
+                                    Post Now (Instant Publish)
+                                </>
+                            )}
+                        </Button>
+
                         <Button
                             onClick={() => router.back()}
                             variant="outline"

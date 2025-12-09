@@ -116,7 +116,7 @@ export default function CalendarPage() {
                                             key={post.id}
                                             className="text-xs bg-primary/20 border border-primary/30 rounded px-2 py-1 truncate"
                                         >
-                                            {post.caption?.substring(0, 20) || 'No caption'}
+                                            {(post.content || post.title)?.substring(0, 20) || 'No caption'}
                                         </div>
                                     ))}
                                     {dayPosts.length > 2 && (
@@ -143,35 +143,56 @@ export default function CalendarPage() {
                     <div className="text-center py-8 text-gray-400">
                         No posts scheduled yet. Create your first post!
                     </div>
-                ) : (
-                    <div className="space-y-3">
-                        {posts.slice(0, 5).map((post: any) => (
-                            <div key={post.id} className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-                                <div className="flex items-center gap-4">
-                                    {post.mediaUrls?.[0] && (
-                                        <img
-                                            src={getImageUrl(post.mediaUrls[0])}
-                                            alt="Post"
-                                            className="w-16 h-16 object-cover rounded-lg"
-                                        />
-                                    )}
-                                    <div>
-                                        <p className="font-medium">{post.caption?.substring(0, 50) || 'No caption'}</p>
-                                        <p className="text-sm text-gray-400">
-                                            {post.scheduledAt ? format(new Date(post.scheduledAt), 'PPp') : 'Draft'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <Link
-                                    href={`/dashboard/posts/${post.id}`}
-                                    className="text-primary hover:text-primary-hover transition-colors"
-                                >
-                                    View
-                                </Link>
+                ) : (() => {
+                    const upcomingPosts = posts
+                        .filter((post: any) => {
+                            // Only show future posts with status 'scheduled' or 'draft'
+                            if (!post.scheduledAt) return false;
+                            const scheduledTime = new Date(post.scheduledAt).getTime();
+                            const now = Date.now();
+                            return scheduledTime > now && (post.status === 'scheduled' || post.status === 'draft');
+                        })
+                        .sort((a: any, b: any) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+                        .slice(0, 5);
+
+                    if (upcomingPosts.length === 0) {
+                        return (
+                            <div className="text-center py-8 text-gray-400">
+                                No upcoming posts scheduled. All posts have been published or are in the past.
                             </div>
-                        ))}
-                    </div>
-                )}
+                        );
+                    }
+
+                    return (
+                        <div className="space-y-3">
+                            {upcomingPosts.map((post: any) => (
+                                <div key={post.id} className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        {post.mediaUrls?.[0] && (
+                                            <img
+                                                src={getImageUrl(post.mediaUrls[0])}
+                                                alt="Post"
+                                                className="w-16 h-16 object-cover rounded-lg"
+                                            />
+                                        )}
+                                        <div>
+                                            <p className="font-medium">{(post.content || post.title)?.substring(0, 50) || 'No caption'}</p>
+                                            <p className="text-sm text-gray-400">
+                                                {post.scheduledAt ? format(new Date(post.scheduledAt), 'PPp') : 'Draft'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href={`/dashboard/posts/${post.id}`}
+                                        className="text-primary hover:text-primary-hover transition-colors"
+                                    >
+                                        View
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );
