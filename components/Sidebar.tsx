@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calendar, TrendingUp, BarChart3, User, PlusCircle } from 'lucide-react';
+import { Calendar, TrendingUp, BarChart3, User, PlusCircle, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ const navItems = [
     { icon: Calendar, label: 'Calendar', href: '/dashboard/calendar' },
     { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },
     { icon: TrendingUp, label: 'Trending', href: '/dashboard/trending' },
+    { icon: Building2, label: 'Business', href: '/dashboard/business' },
     { icon: User, label: 'Profile', href: '/dashboard/profile' },
 ];
 
