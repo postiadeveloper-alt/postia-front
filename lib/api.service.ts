@@ -9,7 +9,7 @@ class ApiService {
         this.baseURL = API_BASE_URL;
         this.api = axios.create({
             baseURL: API_BASE_URL,
-            timeout: 30000,
+            timeout: 120000,
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -137,7 +137,9 @@ class ApiService {
     }
 
     async publishPostNow(postId: string) {
-        const response = await this.api.post(`/calendar/posts/${postId}/publish-now`);
+        const response = await this.api.post(`/calendar/posts/${postId}/publish-now`, {}, {
+            timeout: 180000 // 3 minutes timeout for video processing
+        });
         return response.data;
     }
 

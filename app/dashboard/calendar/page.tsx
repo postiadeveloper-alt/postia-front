@@ -52,7 +52,7 @@ export default function CalendarPage() {
                     className="px-6 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-all shadow-lg shadow-primary/25 flex items-center gap-2"
                 >
                     <Plus className="w-5 h-5" />
-                    Create Post
+                    Create Content
                 </Link>
             </div>
 

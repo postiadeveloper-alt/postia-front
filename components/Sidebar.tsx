@@ -30,7 +30,7 @@ export function Sidebar() {
                 className="w-full mb-6 px-4 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2"
             >
                 <PlusCircle className="w-5 h-5" />
-                Create Post
+                Create Content
             </Link>
 
             <nav className="flex-1 space-y-2">
