@@ -14,6 +14,21 @@ export default function ProfilePage() {
 
     useEffect(() => {
         loadInstagramAccounts();
+
+        // Listen for messages from the OAuth popup
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'instagram-connected') {
+                if (event.data.success) {
+                    alert('Instagram account connected successfully!');
+                    loadInstagramAccounts();
+                }
+            } else if (event.data?.type === 'instagram-error') {
+                alert('Failed to connect Instagram: ' + event.data.error);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
     }, []);
 
     const loadInstagramAccounts = async () => {
@@ -54,8 +69,16 @@ export default function ProfilePage() {
     const handleConnectAccount = async () => {
         try {
             const authUrl = await apiService.getInstagramAuthUrl();
-            window.open(authUrl, '_blank');
-            alert('After connecting your Instagram account, please refresh this page.');
+            const width = 600;
+            const height = 700;
+            const left = window.screenX + (window.innerWidth - width) / 2;
+            const top = window.screenY + (window.innerHeight - height) / 2;
+
+            window.open(
+                authUrl,
+                'Connect Instagram',
+                `width=${width},height=${height},left=${left},top=${top}`
+            );
         } catch (error: any) {
             console.error('Failed to get auth URL:', error);
             alert('Failed to start Instagram connection: ' + (error.response?.data?.message || error.message));
