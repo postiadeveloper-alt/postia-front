@@ -20,6 +20,7 @@ interface BusinessProfileForm {
     contentThemes: string[];
     productCategories: string[];
     prohibitedTopics: string[];
+    logoUrl?: string;
 }
 
 const initialFormState: BusinessProfileForm = {
@@ -35,6 +36,7 @@ const initialFormState: BusinessProfileForm = {
     contentThemes: [],
     productCategories: [],
     prohibitedTopics: [],
+    logoUrl: '',
 };
 
 export default function BusinessPage() {
@@ -43,6 +45,8 @@ export default function BusinessPage() {
     const [accountId, setAccountId] = useState<string | null>(null);
     const [formData, setFormData] = useState<BusinessProfileForm>(initialFormState);
     const [newItem, setNewItem] = useState(''); // Temp state for adding array items
+    const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
@@ -73,6 +77,7 @@ export default function BusinessPage() {
                             contentThemes: profile.contentThemes || [],
                             productCategories: profile.productCategories || [],
                             prohibitedTopics: profile.prohibitedTopics || [],
+                            logoUrl: profile.logoUrl || '',
                         });
                     }
                 } catch (err: any) {
@@ -115,14 +120,36 @@ export default function BusinessPage() {
 
         try {
             setSaving(true);
-            const payload = { ...formData, instagramAccountId: accountId };
+
+            let currentLogoUrl = formData.logoUrl;
+
+            // 1. Upload logo if there is a pending file
+            if (pendingLogoFile) {
+                const res = await apiService.uploadLogo(pendingLogoFile, accountId);
+                currentLogoUrl = res.publicUrl;
+            }
+
+            const payload = {
+                ...formData,
+                instagramAccountId: accountId,
+                logoUrl: currentLogoUrl
+            };
 
             if (formData.id) {
                 await apiService.updateBusinessProfile(formData.id, payload);
             } else {
                 await apiService.createBusinessProfile(payload);
             }
+
+            // Clear pending file after successful save
+            setPendingLogoFile(null);
+            if (logoPreview) {
+                URL.revokeObjectURL(logoPreview);
+                setLogoPreview(null);
+            }
+
             alert('Business profile saved successfully!');
+            loadData(); // Reload to get updated data
         } catch (error) {
             console.error('Error saving profile:', error);
             alert('Failed to save profile.');
@@ -176,6 +203,65 @@ export default function BusinessPage() {
         </div>
     );
 
+    const renderColorInput = () => (
+        <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">Brand Colors</label>
+            <div className="flex gap-2">
+                <div className="relative flex-1">
+                    <input
+                        type="text"
+                        placeholder="#000000"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-12 pr-4 py-2 text-white focus:outline-none focus:border-primary/50"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleArrayAdd('brandColors', e.currentTarget.value);
+                                e.currentTarget.value = '';
+                            }
+                        }}
+                    />
+                    <input
+                        type="color"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-transparent border-none cursor-pointer"
+                        onChange={(e) => {
+                            const input = e.target.previousElementSibling as HTMLInputElement;
+                            input.value = e.target.value.toUpperCase();
+                        }}
+                    />
+                </div>
+                <button
+                    type="button"
+                    className="p-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30"
+                    onClick={(e) => {
+                        const input = e.currentTarget.previousElementSibling?.querySelector('input[type="text"]') as HTMLInputElement;
+                        handleArrayAdd('brandColors', input.value);
+                        input.value = '';
+                    }}
+                >
+                    <Plus className="w-5 h-5" />
+                </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+                {formData.brandColors.map((color, index) => (
+                    <div key={index} className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm border border-white/5">
+                        <div
+                            className="w-4 h-4 rounded-full border border-white/20"
+                            style={{ backgroundColor: color }}
+                        />
+                        <span>{color}</span>
+                        <button
+                            type="button"
+                            onClick={() => handleArrayRemove('brandColors', index)}
+                            className="text-red-400 hover:text-red-300 ml-1"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -205,6 +291,46 @@ export default function BusinessPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="glass-card p-6 space-y-6">
+                    <h3 className="text-xl font-semibold border-b border-white/10 pb-4">Brand Logo</h3>
+                    <div className="flex items-center gap-8">
+                        <div className="w-32 h-32 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center overflow-hidden bg-white/5 relative group">
+                            {logoPreview || formData.logoUrl ? (
+                                <img src={logoPreview || formData.logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                            ) : (
+                                <div className="text-gray-500 flex flex-col items-center gap-2">
+                                    <Plus className="w-6 h-6" />
+                                    <span className="text-xs">No Logo</span>
+                                </div>
+                            )}
+                            <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                                <span className="text-xs text-white font-medium">Change Logo</span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setPendingLogoFile(file);
+                                            if (logoPreview) URL.revokeObjectURL(logoPreview);
+                                            setLogoPreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                />
+                            </label>
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            <p className="text-sm text-gray-400">
+                                Upload your business logo. We will automatically remove the background for you to use it in templates.
+                            </p>
+                            <p className="text-xs text-indigo-400">
+                                Best results with high contrast backgrounds (like white or black).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="glass-card p-6 space-y-6">
                     <h3 className="text-xl font-semibold border-b border-white/10 pb-4">Brand Identity</h3>
 
@@ -295,7 +421,7 @@ export default function BusinessPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {renderArrayInput('Content Themes', 'contentThemes', 'Add theme (Press Enter)')}
-                        {renderArrayInput('Brand Colors', 'brandColors', 'Add hex code (e.g. #FF0000)')}
+                        {renderColorInput()}
                         {renderArrayInput('Product Categories', 'productCategories', 'Add category')}
                         {renderArrayInput('Prohibited Topics', 'prohibitedTopics', 'Add topic to avoid')}
                     </div>

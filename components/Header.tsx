@@ -10,7 +10,7 @@ export function Header() {
     return (
         <header className="h-16 glass-card border-b border-border px-6 flex items-center justify-between">
             <div>
-                <h2 className="text-xl font-semibold">Dashboard</h2>
+                <h2 className="text-xl font-semibold">Panel de Control</h2>
             </div>
 
             <div className="flex items-center gap-4">
@@ -21,7 +21,7 @@ export function Header() {
 
                 <div className="flex items-center gap-3 pl-4 border-l border-border">
                     <div className="text-right">
-                        <p className="text-sm font-medium">{user?.fullName || 'User'}</p>
+                        <p className="text-sm font-medium">{user?.fullName || 'Usuario'}</p>
                         <p className="text-xs text-gray-400">{user?.email || ''}</p>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-semibold">

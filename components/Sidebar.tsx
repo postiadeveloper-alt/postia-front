@@ -7,12 +7,14 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-    { icon: Calendar, label: 'Calendar', href: '/dashboard/calendar' },
-    { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },
-    { icon: TrendingUp, label: 'Trending', href: '/dashboard/trending' },
-    { icon: Building2, label: 'Business', href: '/dashboard/business' },
-    { icon: User, label: 'Profile', href: '/dashboard/profile' },
+    { icon: Calendar, label: 'Calendario', href: '/dashboard/calendar' },
+    { icon: BarChart3, label: 'Analíticas', href: '/dashboard/analytics' },
+    { icon: TrendingUp, label: 'Tendencias', href: '/dashboard/trending' },
+    { icon: Building2, label: 'Negocio', href: '/dashboard/business' },
+    { icon: User, label: 'Perfil', href: '/dashboard/profile' },
+    { icon: PlusCircle, label: 'Estudio', href: '/dashboard/studio' },
 ];
+
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -23,7 +25,7 @@ export function Sidebar() {
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
                     Postia
                 </h1>
-                <p className="text-xs text-gray-400 mt-1">Social Media Management</p>
+                <p className="text-xs text-gray-400 mt-1">Gestión de Redes Sociales</p>
             </div>
 
             <Link
@@ -31,7 +33,7 @@ export function Sidebar() {
                 className="w-full mb-6 px-4 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2"
             >
                 <PlusCircle className="w-5 h-5" />
-                Create Content
+                Crear Contenido
             </Link>
 
             <nav className="flex-1 space-y-2">
@@ -65,7 +67,7 @@ export function Sidebar() {
             </nav>
 
             <div className="pt-4 border-t border-border text-xs text-gray-500">
-                <p>Version 1.0.0</p>
+                <p>Versión 1.0.0</p>
             </div>
         </div>
     );

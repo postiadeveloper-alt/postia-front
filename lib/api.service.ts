@@ -205,6 +205,11 @@ class ApiService {
     }
 
     // Business Profile endpoints
+    async getBusinessProfiles() {
+        const response = await this.api.get('/business-profile');
+        return response.data;
+    }
+
     async getBusinessProfile(accountId: string) {
         const response = await this.api.get(`/business-profile/account/${accountId}`);
         return response.data;
@@ -224,7 +229,125 @@ class ApiService {
         const response = await this.api.delete(`/business-profile/${profileId}`);
         return response.data;
     }
+
+    // Image Processing endpoints
+    async uploadTemplate(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await this.api.post('/image-processing/upload/template', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    }
+
+    async uploadContent(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await this.api.post('/image-processing/upload/content', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    }
+
+    async generateImage(templatePath: string, contentPath: string) {
+        const response = await this.api.post('/image-processing/generate', {
+            templatePath,
+            contentPath,
+        });
+        return response.data;
+    }
+
+    async listTemplates() {
+        const response = await this.api.get('/image-processing/templates');
+        return response.data;
+    }
+
+    async listContent() {
+        const response = await this.api.get('/image-processing/content');
+        return response.data;
+    }
+
+    async listOutputs() {
+        const response = await this.api.get('/image-processing/outputs');
+        return response.data;
+    }
+
+    async uploadLogo(file: File, instagramAccountId: string) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('instagramAccountId', instagramAccountId);
+        const response = await this.api.post('/image-processing/upload/logo', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    }
+
+    async generateAITemplates(instagramAccountId: string) {
+        const response = await this.api.post('/image-processing/generate-ai-templates', {
+            instagramAccountId
+        });
+        return response.data;
+    }
+
+    // Content Strategy endpoints
+    async generateContentStrategy(data: {
+        businessProfileId: string;
+        selectedDays: number[];
+        monthYear: string;
+    }) {
+        const response = await this.api.post('/content-strategy/generate', data);
+        return response.data;
+    }
+
+    async getContentStrategies() {
+        const response = await this.api.get('/content-strategy');
+        return response.data;
+    }
+
+    async getContentStrategiesByMonth(monthYear: string, businessProfileId: string) {
+        const response = await this.api.get(`/content-strategy/month/${monthYear}/profile/${businessProfileId}`);
+        return response.data;
+    }
+
+    async getContentStrategiesByRange(startDate: string, endDate: string, businessProfileId: string) {
+        const response = await this.api.get('/content-strategy/range', {
+            params: { startDate, endDate, businessProfileId }
+        });
+        return response.data;
+    }
+
+    async getContentStrategy(id: string) {
+        const response = await this.api.get(`/content-strategy/${id}`);
+        return response.data;
+    }
+
+    async updateContentStrategy(id: string, data: any) {
+        const response = await this.api.patch(`/content-strategy/${id}`, data);
+        return response.data;
+    }
+
+    async deleteContentStrategy(id: string) {
+        const response = await this.api.delete(`/content-strategy/${id}`);
+        return response.data;
+    }
+
+    async deleteContentStrategiesByMonth(monthYear: string, businessProfileId: string) {
+        const response = await this.api.delete(`/content-strategy/month/${monthYear}/profile/${businessProfileId}`);
+        return response.data;
+    }
+
+    async convertContentStrategyToPost(id: string) {
+        const response = await this.api.post(`/content-strategy/${id}/convert-to-post`);
+        return response.data;
+    }
 }
+
 
 const apiService = new ApiService();
 export default apiService;

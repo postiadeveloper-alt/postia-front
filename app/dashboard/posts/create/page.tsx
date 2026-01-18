@@ -14,6 +14,7 @@ export default function CreatePostPage() {
     const [scheduledDate, setScheduledDate] = useState('');
     const [scheduledTime, setScheduledTime] = useState('');
     const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+    const [preUploadedMediaUrl, setPreUploadedMediaUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [postingNow, setPostingNow] = useState(false);
     const [contentType, setContentType] = useState<'post' | 'story' | 'carousel' | 'reel'>('post');
@@ -34,6 +35,13 @@ export default function CreatePostPage() {
             }
         };
         fetchAccounts();
+
+        // Check for pre-uploaded media from Studio
+        const studioMediaUrl = sessionStorage.getItem('studioMediaUrl');
+        if (studioMediaUrl) {
+            setPreUploadedMediaUrl(studioMediaUrl);
+            sessionStorage.removeItem('studioMediaUrl');
+        }
     }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,10 +70,19 @@ export default function CreatePostPage() {
         if (files.length === 1) {
             return files[0].type.startsWith('video/') ? 'video' : 'image';
         }
+        // If we have a pre-uploaded media URL (from studio), default to image
+        if (preUploadedMediaUrl) {
+            return 'image';
+        }
         return 'image';
     };
 
     const uploadMediaFiles = async (): Promise<string[]> => {
+        // If we have a pre-uploaded media URL from Studio, use it directly
+        if (preUploadedMediaUrl && mediaFiles.length === 0) {
+            return [preUploadedMediaUrl];
+        }
+
         const mediaUrls: string[] = [];
         for (const file of mediaFiles) {
             const formData = new FormData();
@@ -87,11 +104,12 @@ export default function CreatePostPage() {
             alert('Please connect an Instagram account first');
             return false;
         }
-        if (mediaFiles.length === 0) {
+        // Allow pre-uploaded media from Studio
+        if (mediaFiles.length === 0 && !preUploadedMediaUrl) {
             alert('Please upload at least one media file');
             return false;
         }
-        if (contentType === 'carousel' && mediaFiles.length < 2) {
+        if (contentType === 'carousel' && mediaFiles.length < 2 && !preUploadedMediaUrl) {
             alert('Carousel requires at least 2 media files');
             return false;
         }
@@ -101,7 +119,7 @@ export default function CreatePostPage() {
             alert(`${contentType === 'story' ? 'Story' : 'Reel'} creation currently supports single file upload.`);
             return false;
         }
-        if (contentType === 'reel' && !mediaFiles[0].type.startsWith('video/')) {
+        if (contentType === 'reel' && mediaFiles.length > 0 && !mediaFiles[0].type.startsWith('video/')) {
             alert('Reels require a video file');
             return false;
         }
@@ -230,9 +248,28 @@ export default function CreatePostPage() {
                                 className="hidden"
                             />
                             <div className="border-2 border-dashed border-white/20 hover:border-primary/50 rounded-lg p-8 text-center transition-all">
-                                {mediaFiles.length > 0 ? (
+                                {preUploadedMediaUrl && mediaFiles.length === 0 ? (
+                                    <div className="space-y-3">
+                                        <img 
+                                            src={preUploadedMediaUrl} 
+                                            alt="Imagen del Studio" 
+                                            className="max-h-48 mx-auto rounded-lg shadow-lg"
+                                        />
+                                        <p className="text-green-400 font-semibold">Imagen del Studio seleccionada</p>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setPreUploadedMediaUrl(null);
+                                            }}
+                                            className="text-xs text-gray-400 hover:text-red-400 underline"
+                                        >
+                                            Quitar y subir otra
+                                        </button>
+                                    </div>
+                                ) : mediaFiles.length > 0 ? (
                                     <div className="space-y-2">
-                                        <p className="text-primary font-semibold">{mediaFiles.length} file(s) selected</p>
+                                        <p className="text-primary font-semibold">{mediaFiles.length} archivo(s) seleccionado(s)</p>
                                         <div className="flex flex-wrap gap-2 justify-center">
                                             {mediaFiles.map((file, index) => (
                                                 <div key={index} className="text-xs bg-primary/20 px-2 py-1 rounded">
@@ -244,9 +281,9 @@ export default function CreatePostPage() {
                                 ) : (
                                     <>
                                         <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                                        <p className="text-gray-400">Click to upload {contentType === 'reel' ? 'video' : 'media'}</p>
+                                        <p className="text-gray-400">Haz clic para subir {contentType === 'reel' ? 'video' : 'media'}</p>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            {contentType === 'reel' ? 'MP4 Only' : 'JPG, PNG, MP4'}
+                                            {contentType === 'reel' ? 'Solo MP4' : 'JPG, PNG, MP4'}
                                         </p>
                                     </>
                                 )}
