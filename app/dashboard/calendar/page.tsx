@@ -20,6 +20,14 @@ const FORMAT_COLORS: Record<string, string> = {
     live: 'bg-red-500/30 border-red-500/50',
 };
 
+// Format icons mapping
+const FORMAT_ICONS: Record<string, string> = {
+    carousel: '📸',
+    reel: '🎬',
+    static_post: '🖼️',
+    story: '📱'
+};
+
 export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [posts, setPosts] = useState<any[]>([]);
@@ -282,12 +290,7 @@ export default function CalendarPage() {
                                 <div className="space-y-1">
                                     {/* AI Content Strategies */}
                                     {dayStrategies.slice(0, 2).map((strategy: any) => {
-                                        const formatIcon = {
-                                            'carousel': '📸',
-                                            'reel': '🎬',
-                                            'static_post': '🖼️',
-                                            'story': '📱'
-                                        }[strategy.format] || '📝';
+                                        const formatIcon = FORMAT_ICONS[strategy.format as keyof typeof FORMAT_ICONS] || '📝';
                                         return (
                                             <div
                                                 key={strategy.id}
