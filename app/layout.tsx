@@ -6,8 +6,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "Postia - Social Media Management",
-    description: "Manage your social media presence with ease.",
+    title: "Postia - Gestión de Redes Sociales",
+    description: "Gestiona tu presencia en redes sociales con facilidad.",
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="es">
             <body className={inter.className}>
                 <AuthProvider>
                     {children}

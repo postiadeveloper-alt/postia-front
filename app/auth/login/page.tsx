@@ -29,7 +29,7 @@ export default function LoginPage() {
             router.push('/dashboard/calendar');
         } catch (err: any) {
             console.error('Login error:', err);
-            setError(err.response?.data?.message || 'Failed to login. Please try again.');
+            setError(err.response?.data?.message || 'Error al iniciar sesión. Por favor, inténtalo de nuevo.');
         } finally {
             setLoading(false);
         }
@@ -44,20 +44,20 @@ export default function LoginPage() {
         >
             <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
-                    Welcome Back
+                    Bienvenido de nuevo
                 </h1>
-                <p className="text-gray-400">Sign in to your Postia account</p>
+                <p className="text-gray-400">Inicia sesión en tu cuenta de Postia</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                     <label htmlFor="email" className="text-sm font-medium text-gray-300">
-                        Email
+                        Correo electrónico
                     </label>
                     <Input
                         id="email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="tu@ejemplo.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -66,7 +66,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                     <label htmlFor="password" className="text-sm font-medium text-gray-300">
-                        Password
+                        Contraseña
                     </label>
                     <Input
                         id="password"
@@ -89,14 +89,14 @@ export default function LoginPage() {
                     className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 rounded-lg transition-all shadow-lg shadow-primary/25"
                     disabled={loading}
                 >
-                    {loading ? 'Signing in...' : 'Sign In'}
+                    {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </Button>
             </form>
 
             <div className="text-center text-sm text-gray-400">
-                Don&apos;t have an account?{' '}
+                ¿No tienes una cuenta?{' '}
                 <Link href="/auth/register" className="text-primary hover:text-primary-hover transition-colors">
-                    Sign up
+                    Regístrate
                 </Link>
             </div>
         </motion.div>

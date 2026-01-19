@@ -27,7 +27,7 @@ export default function RegisterPage() {
             await register(email, password, fullName, agencyName || undefined);
             router.push('/dashboard/calendar');
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to register. Please try again.');
+            setError(err.response?.data?.message || 'Error al registrarse. Por favor, inténtalo de nuevo.');
         } finally {
             setLoading(false);
         }
@@ -42,20 +42,20 @@ export default function RegisterPage() {
         >
             <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
-                    Create Account
+                    Crear Cuenta
                 </h1>
-                <p className="text-gray-400">Get started with Postia today</p>
+                <p className="text-gray-400">Comienza con Postia hoy</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                     <label htmlFor="fullName" className="text-sm font-medium text-gray-300">
-                        Full Name
+                        Nombre completo
                     </label>
                     <Input
                         id="fullName"
                         type="text"
-                        placeholder="John Doe"
+                        placeholder="Juan García"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         required
@@ -64,12 +64,12 @@ export default function RegisterPage() {
 
                 <div className="space-y-2">
                     <label htmlFor="email" className="text-sm font-medium text-gray-300">
-                        Email
+                        Correo electrónico
                     </label>
                     <Input
                         id="email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="tu@ejemplo.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -78,7 +78,7 @@ export default function RegisterPage() {
 
                 <div className="space-y-2">
                     <label htmlFor="password" className="text-sm font-medium text-gray-300">
-                        Password
+                        Contraseña
                     </label>
                     <Input
                         id="password"
@@ -92,12 +92,12 @@ export default function RegisterPage() {
 
                 <div className="space-y-2">
                     <label htmlFor="agencyName" className="text-sm font-medium text-gray-300">
-                        Agency Name <span className="text-gray-500">(Optional)</span>
+                        Nombre de la agencia <span className="text-gray-500">(Opcional)</span>
                     </label>
                     <Input
                         id="agencyName"
                         type="text"
-                        placeholder="Your Agency"
+                        placeholder="Tu Agencia"
                         value={agencyName}
                         onChange={(e) => setAgencyName(e.target.value)}
                     />
@@ -114,14 +114,14 @@ export default function RegisterPage() {
                     className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 rounded-lg transition-all shadow-lg shadow-primary/25"
                     disabled={loading}
                 >
-                    {loading ? 'Creating account...' : 'Create Account'}
+                    {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
                 </Button>
             </form>
 
             <div className="text-center text-sm text-gray-400">
-                Already have an account?{' '}
+                ¿Ya tienes una cuenta?{' '}
                 <Link href="/auth/login" className="text-primary hover:text-primary-hover transition-colors">
-                    Sign in
+                    Iniciar sesión
                 </Link>
             </div>
         </motion.div>

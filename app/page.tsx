@@ -10,8 +10,8 @@ export default function Home() {
                     Postia
                 </h1>
                 <p className="text-xl text-gray-300 max-w-2xl">
-                    The ultimate social media management platform for agencies and creators.
-                    Schedule, analyze, and grow.
+                    La plataforma definitiva de gestión de redes sociales para agencias y creadores.
+                    Programa, analiza y crece.
                 </p>
 
                 <div className="flex gap-4 justify-center">
@@ -19,13 +19,13 @@ export default function Home() {
                         href="/auth/login"
                         className="px-8 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-hover transition-all shadow-lg shadow-primary/25"
                     >
-                        Get Started
+                        Comenzar
                     </Link>
                     <Link
                         href="/auth/register"
                         className="px-8 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition-all backdrop-blur-sm border border-white/10"
                     >
-                        Sign Up
+                        Registrarse
                     </Link>
                 </div>
             </div>
