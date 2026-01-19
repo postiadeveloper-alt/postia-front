@@ -257,20 +257,8 @@ export default function CreatePostPage() {
                                         : 'border-white/10 bg-white/5 hover:border-white/30'
                                 }`}
                             >
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                    {account.profilePictureUrl ? (
-                                        <img 
-                                            src={account.profilePictureUrl} 
-                                            alt={account.username}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                // Hide the broken image and show the fallback icon
-                                                e.currentTarget.style.display = 'none';
-                                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                            }}
-                                        />
-                                    ) : null}
-                                    <Instagram className={`w-5 h-5 text-white ${account.profilePictureUrl ? 'hidden' : ''}`} />
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                    <Instagram className="w-5 h-5 text-white" />
                                 </div>
                                 <div className="text-left flex-1 min-w-0">
                                     <p className={`font-semibold truncate ${selectedAccountId === account.id ? 'text-white' : 'text-gray-300'}`}>
