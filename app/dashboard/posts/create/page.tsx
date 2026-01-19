@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import apiService from '@/lib/api.service';
-import { Upload, Calendar, Clock, Image as ImageIcon, Video, Send, Layers, Smartphone, Film } from 'lucide-react';
+import { Upload, Calendar, Clock, Image as ImageIcon, Video, Send, Layers, Smartphone, Film, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
@@ -229,6 +229,66 @@ export default function CreatePostPage() {
                 />
             </div>
 
+            {/* Instagram Account Selector */}
+            <div className="glass-card p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Instagram className="w-5 h-5 text-pink-500" />
+                    Publish to Account
+                </h3>
+                {accounts.length === 0 ? (
+                    <div className="text-center py-4">
+                        <p className="text-gray-400 mb-3">No Instagram accounts connected</p>
+                        <a 
+                            href="/dashboard/accounts" 
+                            className="text-primary hover:underline text-sm"
+                        >
+                            Connect an account →
+                        </a>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {accounts.map((account) => (
+                            <button
+                                key={account.id}
+                                onClick={() => setSelectedAccountId(account.id)}
+                                className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
+                                    selectedAccountId === account.id
+                                        ? 'border-primary bg-primary/20'
+                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                }`}
+                            >
+                                {account.profilePictureUrl ? (
+                                    <img 
+                                        src={account.profilePictureUrl} 
+                                        alt={account.username}
+                                        className="w-10 h-10 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                                        <Instagram className="w-5 h-5 text-white" />
+                                    </div>
+                                )}
+                                <div className="text-left flex-1 min-w-0">
+                                    <p className={`font-semibold truncate ${selectedAccountId === account.id ? 'text-white' : 'text-gray-300'}`}>
+                                        @{account.username}
+                                    </p>
+                                    <p className="text-xs text-gray-500 truncate">
+                                        {account.accountType || 'Business'}
+                                    </p>
+                                </div>
+                                {selectedAccountId === account.id && (
+                                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left Column - Content */}
                 <div className="space-y-6">
@@ -389,7 +449,7 @@ export default function CreatePostPage() {
                     <div className="space-y-3">
                         <Button
                             onClick={handleSubmit}
-                            disabled={loading || postingNow || mediaFiles.length === 0}
+                            disabled={loading || postingNow || (mediaFiles.length === 0 && !preUploadedMediaUrl)}
                             className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3"
                         >
                             {loading ? 'Creating...' : scheduledDate ? `Schedule ${contentType === 'story' ? 'Story' : contentType === 'reel' ? 'Reel' : 'Post'}` : 'Save as Draft'}
@@ -397,7 +457,7 @@ export default function CreatePostPage() {
 
                         <Button
                             onClick={handlePostNow}
-                            disabled={postingNow || loading || mediaFiles.length === 0}
+                            disabled={postingNow || loading || (mediaFiles.length === 0 && !preUploadedMediaUrl)}
                             className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 flex items-center justify-center gap-2"
                         >
                             {postingNow ? (
