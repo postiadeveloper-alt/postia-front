@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
+import OnboardingModal from '@/components/OnboardingModal';
+import apiService from '@/lib/api.service';
 
 export default function DashboardLayout({
     children,
@@ -13,6 +15,8 @@ export default function DashboardLayout({
 }) {
     const router = useRouter();
     const { isAuthenticated, loading } = useAuth();
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [checkingProfiles, setCheckingProfiles] = useState(true);
 
     useEffect(() => {
         console.log('DashboardLayout: Auth check - loading:', loading, 'isAuthenticated:', isAuthenticated);
@@ -22,12 +26,38 @@ export default function DashboardLayout({
         }
     }, [isAuthenticated, loading, router]);
 
-    if (loading) {
+    // Check for business profiles to trigger onboarding
+    useEffect(() => {
+        const checkOnboarding = async () => {
+            if (isAuthenticated && !loading) {
+                try {
+                    const profiles = await apiService.getBusinessProfiles();
+                    if (!profiles || profiles.length === 0) {
+                        setShowOnboarding(true);
+                    }
+                } catch (error) {
+                    console.error('Failed to check business profiles:', error);
+                } finally {
+                    setCheckingProfiles(false);
+                }
+            }
+        };
+
+        checkOnboarding();
+    }, [isAuthenticated, loading]);
+
+    const handleOnboardingComplete = () => {
+        setShowOnboarding(false);
+        // Refresh the page or trigger a re-fetch if needed
+        window.location.reload();
+    };
+
+    if (loading || (isAuthenticated && checkingProfiles)) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading...</p>
+                    <p className="text-gray-400">Loading Postia...</p>
                 </div>
             </div>
         );
@@ -46,6 +76,11 @@ export default function DashboardLayout({
                     {children}
                 </main>
             </div>
+
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onComplete={handleOnboardingComplete}
+            />
         </div>
     );
 }
