@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Sparkles, ArrowRight, Instagram, Building2, Rocket } from 'lucide-react';
+import { Check, Sparkles, ArrowRight, Instagram, Building2, Rocket, Plus, X } from 'lucide-react';
 import apiService from '@/lib/api.service';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -31,11 +31,17 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
         brandValues: '',
         visualStyle: '',
         communicationTone: '',
-        brandColors: '', // Stored as comma-separated string for input
-        contentThemes: '',
-        productCategories: '',
-        prohibitedTopics: '',
+        brandColors: [] as string[],
+        contentThemes: [] as string[],
+        productCategories: [] as string[],
+        prohibitedTopics: [] as string[],
         contentGuidelines: '',
+    });
+    const [pendingColor, setPendingColor] = useState('#6366F1');
+    const [pendingItems, setPendingItems] = useState({
+        themes: '',
+        categories: '',
+        topics: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -87,6 +93,34 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
         }
     };
 
+    const handleAddItem = (field: 'contentThemes' | 'productCategories' | 'prohibitedTopics', key: keyof typeof pendingItems) => {
+        const val = pendingItems[key].trim();
+        if (!val) return;
+        if (formData[field].includes(val)) return;
+
+        setFormData(prev => ({
+            ...prev,
+            [field]: [...prev[field], val]
+        }));
+        setPendingItems(prev => ({ ...prev, [key]: '' }));
+    };
+
+    const handleRemoveItem = (field: keyof typeof formData, index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: (prev[field] as any[]).filter((_, i) => i !== index)
+        }));
+    };
+
+    const addColor = () => {
+        const color = pendingColor.toUpperCase();
+        if (formData.brandColors.includes(color)) return;
+        setFormData(prev => ({
+            ...prev,
+            brandColors: [...prev.brandColors, color]
+        }));
+    };
+
     const handleCreateProfile = async () => {
         if (!connectedAccount) {
             alert('Error: No connected account found.');
@@ -124,24 +158,9 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
         setIsSubmitting(true);
 
-        // Helper to parse comma-separated strings to arrays
-        const parseArray = (str: string) => str.split(',').map(s => s.trim()).filter(Boolean);
-
         const payload = {
             instagramAccountId: accountId,
-            brandName: formData.brandName,
-            industry: formData.industry,
-            brandDescription: formData.brandDescription,
-            targetAudience: formData.targetAudience,
-            brandValues: formData.brandValues,
-            visualStyle: formData.visualStyle,
-            communicationTone: formData.communicationTone,
-            contentGuidelines: formData.contentGuidelines,
-            // Parse arrays
-            brandColors: parseArray(formData.brandColors),
-            contentThemes: parseArray(formData.contentThemes),
-            productCategories: parseArray(formData.productCategories),
-            prohibitedTopics: parseArray(formData.prohibitedTopics),
+            ...formData
         };
 
         console.log('Creating business profile with payload:', payload);
@@ -232,7 +251,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                 </div>
                             </div>
                         ) : (
-                            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                                 <div className="text-center space-y-2">
                                     <div className="inline-flex p-3 bg-green-500/20 rounded-xl mb-2 text-green-400">
                                         <Check className="w-6 h-6" />
@@ -271,25 +290,25 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
                                     {/* Essential Info */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Nombre de la Marca <span className="text-red-400">*</span></label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Nombre de la Marca <span className="text-red-400">*</span></label>
                                             <div className="relative">
-                                                <Building2 className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
+                                                <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
                                                 <Input
                                                     value={formData.brandName}
                                                     onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
-                                                    className="pl-10 bg-white/5 border-white/10 text-white focus:border-primary"
+                                                    className="pl-9 h-9 bg-white/5 border-white/10 text-white text-sm focus:border-primary"
                                                     placeholder="Ej. Postia Agency"
                                                 />
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Industria <span className="text-red-400">*</span></label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Industria <span className="text-red-400">*</span></label>
                                             <select
                                                 value={formData.industry}
                                                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                                                className="w-full h-10 bg-white/5 border border-white/10 rounded-md px-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                                className="w-full h-9 bg-gray-800/50 border border-white/10 rounded-md px-3 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                             >
                                                 <option value="" className="bg-gray-900">Seleccionar Industria</option>
                                                 {INDUSTRIES.map(ind => (
@@ -299,139 +318,168 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-300">Descripción de la Marca</label>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-400">Descripción de la Marca</label>
                                         <textarea
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-gray-600 min-h-[80px] resize-none"
-                                            placeholder="Describe qué hace tu negocio, tu misión y qué te hace único..."
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-gray-600 min-h-[60px] resize-none"
+                                            placeholder="¿Qué hace única a tu marca?"
                                             value={formData.brandDescription}
                                             onChange={(e) => setFormData({ ...formData, brandDescription: e.target.value })}
                                         />
                                     </div>
 
-                                    {/* Brand Details */}
+                                    {/* Details Grid */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Público Objetivo</label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Público Objetivo</label>
                                             <Input
                                                 value={formData.targetAudience}
                                                 onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-                                                className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                placeholder="Ej. Mujeres 25-45 años interesadas en moda"
+                                                className="h-9 bg-white/5 border-white/10 text-sm text-white"
+                                                placeholder="Ej. Jóvenes emprendedores"
                                             />
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Valores de Marca</label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Valores de Marca</label>
                                             <Input
                                                 value={formData.brandValues}
                                                 onChange={(e) => setFormData({ ...formData, brandValues: e.target.value })}
-                                                className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                placeholder="Ej. Sostenibilidad, Innovación, Calidad"
+                                                className="h-9 bg-white/5 border-white/10 text-sm text-white"
+                                                placeholder="Ej. Transparencia, Innovación"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Style & Tone */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Estilo Visual</label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Estilo Visual</label>
                                             <select
                                                 value={formData.visualStyle}
                                                 onChange={(e) => setFormData({ ...formData, visualStyle: e.target.value })}
-                                                className="w-full h-10 bg-white/5 border border-white/10 rounded-md px-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                                className="w-full h-9 bg-gray-800/50 border border-white/10 rounded-md px-3 text-sm text-white focus:outline-none"
                                             >
-                                                <option value="" className="bg-gray-900">Seleccionar Estilo</option>
+                                                <option value="" className="bg-gray-900">Estilo</option>
                                                 <option value="Minimalist" className="bg-gray-900">Minimalista</option>
-                                                <option value="Bold" className="bg-gray-900">Audaz / Llamativo</option>
-                                                <option value="Vintage" className="bg-gray-900">Vintage / Retro</option>
-                                                <option value="Luxury" className="bg-gray-900">Lujo / Elegante</option>
-                                                <option value="Playful" className="bg-gray-900">Divertido / Juguetón</option>
+                                                <option value="Bold" className="bg-gray-900">Audaz</option>
+                                                <option value="Vintage" className="bg-gray-900">Vintage</option>
+                                                <option value="Luxury" className="bg-gray-900">Lujo</option>
+                                                <option value="Playful" className="bg-gray-900">Juguetón</option>
                                             </select>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Tono de Comunicación</label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Tono de Comunicación</label>
                                             <select
                                                 value={formData.communicationTone}
                                                 onChange={(e) => setFormData({ ...formData, communicationTone: e.target.value })}
-                                                className="w-full h-10 bg-white/5 border border-white/10 rounded-md px-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                                className="w-full h-9 bg-gray-800/50 border border-white/10 rounded-md px-3 text-sm text-white focus:outline-none"
                                             >
-                                                <option value="" className="bg-gray-900">Seleccionar Tono</option>
+                                                <option value="" className="bg-gray-900">Tono</option>
                                                 <option value="Professional" className="bg-gray-900">Profesional</option>
-                                                <option value="Friendly" className="bg-gray-900">Amigable / Cercano</option>
+                                                <option value="Friendly" className="bg-gray-900">Amigable</option>
                                                 <option value="Humorous" className="bg-gray-900">Humorístico</option>
                                                 <option value="Inspirational" className="bg-gray-900">Inspiracional</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    {/* Strategy Lists */}
-                                    <div className="space-y-4 pt-2">
-                                        <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Estrategia de Contenido</h3>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-300">Colores de Marca</label>
-                                                <div className="relative flex gap-2">
-                                                    <Input
-                                                        value={formData.brandColors}
-                                                        onChange={(e) => setFormData({ ...formData, brandColors: e.target.value })}
-                                                        className="bg-white/5 border-white/10 text-white focus:border-primary pl-12"
-                                                        placeholder="#FF0000, #00FF00"
+                                    {/* Strategy Section */}
+                                    <div className="space-y-4 pt-2 border-t border-white/5">
+                                        {/* Colors UX Improved */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">Colores de Marca</label>
+                                            <div className="flex gap-2 items-center">
+                                                <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-white/20 shrink-0">
+                                                    <input
+                                                        type="color"
+                                                        value={pendingColor}
+                                                        onChange={(e) => setPendingColor(e.target.value)}
+                                                        className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
                                                     />
-                                                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden border border-white/20 cursor-pointer">
-                                                        <input
-                                                            type="color"
-                                                            className="w-[150%] h-[150%] -m-[25%] cursor-pointer"
-                                                            onChange={(e) => {
-                                                                const newColor = e.target.value.toUpperCase();
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    brandColors: prev.brandColors
-                                                                        ? `${prev.brandColors}, ${newColor}`
-                                                                        : newColor
-                                                                }));
-                                                            }}
-                                                        />
-                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-300">Temas de Contenido</label>
-                                                <Input
-                                                    value={formData.contentThemes}
-                                                    onChange={(e) => setFormData({ ...formData, contentThemes: e.target.value })}
-                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                    placeholder="Tips, Noticias, Promociones..."
-                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={addColor}
+                                                    className="h-10 px-3 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors flex items-center gap-2 border border-white/10"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    <span className="text-xs font-medium">Añadir</span>
+                                                </button>
+                                                <div className="flex flex-wrap gap-2 ml-2">
+                                                    {formData.brandColors.map((c, i) => (
+                                                        <div key={i} className="group relative w-8 h-8 rounded-full border border-white/20 shadow-lg" style={{ backgroundColor: c }}>
+                                                            <button
+                                                                onClick={() => handleRemoveItem('brandColors', i)}
+                                                                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <X className="w-2 h-2 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 
+                                        {/* Tag Inputs for other fields */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-300">Categorías de Producto</label>
+                                                <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">Temas</label>
                                                 <Input
-                                                    value={formData.productCategories}
-                                                    onChange={(e) => setFormData({ ...formData, productCategories: e.target.value })}
-                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                    placeholder="Ropa, Accesorios, Calzado..."
+                                                    value={pendingItems.themes}
+                                                    onChange={(e) => setPendingItems({ ...pendingItems, themes: e.target.value })}
+                                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddItem('contentThemes', 'themes'))}
+                                                    className="h-9 bg-white/5 border-white/10 text-xs"
+                                                    placeholder="Ej. Tutoriales (Enter)"
                                                 />
+                                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                                    {formData.contentThemes.map((t, i) => (
+                                                        <span key={i} className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-[10px] flex items-center gap-1 border border-purple-500/20">
+                                                            {t} <X className="w-2 h-2 cursor-pointer hover:text-white" onClick={() => handleRemoveItem('contentThemes', i)} />
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-300">Temas Prohibidos</label>
+                                                <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">Categorías</label>
                                                 <Input
-                                                    value={formData.prohibitedTopics}
-                                                    onChange={(e) => setFormData({ ...formData, prohibitedTopics: e.target.value })}
-                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                    placeholder="Política, Religión..."
+                                                    value={pendingItems.categories}
+                                                    onChange={(e) => setPendingItems({ ...pendingItems, categories: e.target.value })}
+                                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddItem('productCategories', 'categories'))}
+                                                    className="h-9 bg-white/5 border-white/10 text-xs"
+                                                    placeholder="Ej. Skincare (Enter)"
                                                 />
+                                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                                    {formData.productCategories.map((c, i) => (
+                                                        <span key={i} className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-[10px] flex items-center gap-1 border border-blue-500/20">
+                                                            {c} <X className="w-2 h-2 cursor-pointer hover:text-white" onClick={() => handleRemoveItem('productCategories', i)} />
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Guía de Contenido Adicional</label>
+                                            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">Temas Prohibidos</label>
+                                            <Input
+                                                value={pendingItems.topics}
+                                                onChange={(e) => setPendingItems({ ...pendingItems, topics: e.target.value })}
+                                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddItem('prohibitedTopics', 'topics'))}
+                                                className="h-9 bg-white/5 border-white/10 text-xs"
+                                                placeholder="Contenido que prefieres evitar (Enter)"
+                                            />
+                                            <div className="flex flex-wrap gap-1.5 pt-1">
+                                                {formData.prohibitedTopics.map((t, i) => (
+                                                    <span key={i} className="px-2 py-0.5 bg-red-500/20 text-red-300 rounded text-[10px] flex items-center gap-1 border border-red-500/20">
+                                                        {t} <X className="w-2 h-2 cursor-pointer hover:text-white" onClick={() => handleRemoveItem('prohibitedTopics', i)} />
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-400">Instrucciones Adicionales</label>
                                             <textarea
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-gray-600 min-h-[60px] resize-none"
-                                                placeholder="Instrucciones específicas para la IA..."
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:border-primary min-h-[50px] resize-none"
+                                                placeholder="Ej. Siempre usar emojis, no usar jerga..."
                                                 value={formData.contentGuidelines}
                                                 onChange={(e) => setFormData({ ...formData, contentGuidelines: e.target.value })}
                                             />
@@ -442,16 +490,9 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                 <Button
                                     onClick={handleCreateProfile}
                                     disabled={isSubmitting || !formData.brandName || !formData.industry}
-                                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white py-6 text-lg shadow-lg shadow-blue-500/20"
+                                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white py-5 text-lg shadow-lg shadow-blue-500/20 mt-4"
                                 >
-                                    {isSubmitting ? (
-                                        'Creando perfil...'
-                                    ) : (
-                                        <span className="flex items-center gap-2">
-                                            Comenzar
-                                            <Rocket className="w-5 h-5" />
-                                        </span>
-                                    )}
+                                    {isSubmitting ? 'Configurando...' : 'Finalizar y Comenzar'}
                                 </Button>
                             </div>
                         )}
