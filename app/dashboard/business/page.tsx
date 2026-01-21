@@ -129,15 +129,20 @@ export default function BusinessPage() {
                 currentLogoUrl = res.publicUrl;
             }
 
-            const payload = {
-                ...formData,
-                instagramAccountId: accountId,
+            // Prepare payload
+            const { id: profileId, ...restFormData } = formData;
+            const payload: any = {
+                ...restFormData,
                 logoUrl: currentLogoUrl
             };
 
-            if (formData.id) {
-                await apiService.updateBusinessProfile(formData.id, payload);
+            if (profileId) {
+                // When updating, the ID is in the URL, not in the body
+                // And instagramAccountId is also not allowed in PATCH body
+                await apiService.updateBusinessProfile(profileId, payload);
             } else {
+                // When creating, instagramAccountId IS required
+                payload.instagramAccountId = accountId;
                 await apiService.createBusinessProfile(payload);
             }
 
