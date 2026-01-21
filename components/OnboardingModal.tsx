@@ -70,20 +70,44 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
     };
 
     const handleCreateProfile = async () => {
-        if (!connectedAccount) return;
+        if (!connectedAccount) {
+            alert('Error: No connected account found.');
+            return;
+        }
+
+        if (!connectedAccount.id) {
+            console.error('Connected account has no ID:', connectedAccount);
+            alert('Error: Connected account has no ID. Please try connecting again.');
+            return;
+        }
+
         setIsSubmitting(true);
 
+        const payload = {
+            brandName: formData.brandName,
+            industry: formData.industry,
+            brandDescription: formData.brandDescription,
+            instagramAccountId: connectedAccount.id,
+        };
+
+        console.log('Creating business profile with payload:', payload);
+
         try {
-            await apiService.createBusinessProfile({
-                brandName: formData.brandName,
-                industry: formData.industry,
-                brandDescription: formData.brandDescription,
-                instagramAccountId: connectedAccount.id,
-            });
+            await apiService.createBusinessProfile(payload);
             onComplete();
         } catch (error: any) {
             console.error('Failed to create business profile:', error);
-            alert('Failed to create profile: ' + (error.message || 'Unknown error'));
+
+            const serverMessage = error.response?.data?.message;
+            let displayMessage = error.message || 'Unknown error';
+
+            if (Array.isArray(serverMessage)) {
+                displayMessage = serverMessage.join(', ');
+            } else if (typeof serverMessage === 'string') {
+                displayMessage = serverMessage;
+            }
+
+            alert('Failed to create profile: ' + displayMessage);
         } finally {
             setIsSubmitting(false);
         }
