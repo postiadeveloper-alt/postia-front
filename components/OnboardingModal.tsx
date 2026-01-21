@@ -27,13 +27,24 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
         // Listen for messages from the OAuth popup
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'instagram-connected') {
+                console.log('Received instagram-connected event:', event.data);
                 if (event.data.success) {
-                    setConnectedAccount(event.data.account);
+                    const account = event.data.account;
+
+                    // Version Check: Detect if backend is sending old data structure
+                    if (account && 'followers' in account && !('followersCount' in account)) {
+                        alert('System Error: The backend server is running an outdated version. Please redeploy the backend.');
+                        console.error('Backend Version Mismatch: Received old "followers" key instead of "followersCount".');
+                        return;
+                    }
+
+                    setConnectedAccount(account);
+
                     // Auto-fill some data if available
                     setFormData(prev => ({
                         ...prev,
-                        brandName: event.data.account.name || event.data.account.username || '',
-                        brandDescription: event.data.account.biography || '',
+                        brandName: account.name || account.username || '',
+                        brandDescription: account.biography || '',
                     }));
                     setStep(2);
                     setIsConnecting(false);
