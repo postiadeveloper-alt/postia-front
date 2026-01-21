@@ -101,26 +101,26 @@ export default function CreatePostPage() {
 
     const validateForm = () => {
         if (!selectedAccountId) {
-            alert('Please connect an Instagram account first');
+            alert('Por favor, conecta una cuenta de Instagram primero');
             return false;
         }
         // Allow pre-uploaded media from Studio
         if (mediaFiles.length === 0 && !preUploadedMediaUrl) {
-            alert('Please upload at least one media file');
+            alert('Por favor, sube al menos un archivo multimedia');
             return false;
         }
         if (contentType === 'carousel' && mediaFiles.length < 2 && !preUploadedMediaUrl) {
-            alert('Carousel requires at least 2 media files');
+            alert('El carrusel requiere al menos 2 archivos multimedia');
             return false;
         }
         if ((contentType === 'reel' || contentType === 'story') && mediaFiles.length > 1) {
             // Currently backend handles 1 item for Story/Reel creation via this flow
             // Although Story could be multiple, let's limit to 1 for simplicity unless backend loops
-            alert(`${contentType === 'story' ? 'Story' : 'Reel'} creation currently supports single file upload.`);
+            alert(`La creación de ${contentType === 'story' ? 'Story' : 'Reel'} actualmente solo admite la carga de un solo archivo.`);
             return false;
         }
         if (contentType === 'reel' && mediaFiles.length > 0 && !mediaFiles[0].type.startsWith('video/')) {
-            alert('Reels require a video file');
+            alert('Los Reels requieren un archivo de video');
             return false;
         }
         return true;
@@ -150,7 +150,7 @@ export default function CreatePostPage() {
             router.push('/dashboard/calendar');
         } catch (error: any) {
             console.error('Failed to create post:', error);
-            alert(error.response?.data?.message || 'Failed to create post. Please try again.');
+            alert(error.response?.data?.message || 'Error al crear la publicación. Por favor, intenta de nuevo.');
         } finally {
             setLoading(false);
         }
@@ -177,12 +177,12 @@ export default function CreatePostPage() {
             const createdPost = await apiService.createPost(postData);
             await apiService.publishPostNow(createdPost.id);
 
-            alert('🎉 Content published successfully to Instagram!');
+            alert('🎉 ¡Contenido publicado exitosamente en Instagram!');
             router.push('/dashboard/calendar');
         } catch (error: any) {
             console.error('Failed to post now:', error);
-            const errorMessage = error.response?.data?.message || error.message || 'Failed to publish post';
-            alert(`❌ Failed to publish: ${errorMessage}`);
+            const errorMessage = error.response?.data?.message || error.message || 'Error al publicar';
+            alert(`❌ Falló la publicación: ${errorMessage}`);
         } finally {
             setPostingNow(false);
         }
@@ -192,38 +192,38 @@ export default function CreatePostPage() {
         <div className="max-w-4xl mx-auto space-y-6">
             <div>
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
-                    Create Content
+                    Crear Contenido
                 </h1>
-                <p className="text-gray-400 mt-1">Create and schedule your Instagram posts, stories, and reels</p>
+                <p className="text-gray-400 mt-1">Crea y programa tus publicaciones, historias y reels de Instagram</p>
             </div>
 
             {/* Content Type Selector */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <ContentTypeCard
                     icon={ImageIcon}
-                    label="Post"
-                    description="Feed Photo/Video"
+                    label="Publicación"
+                    description="Imagen/Video del Feed"
                     active={contentType === 'post'}
                     onClick={() => setContentType('post')}
                 />
                 <ContentTypeCard
                     icon={Smartphone}
-                    label="Story"
-                    description="24h Story"
+                    label="Historia"
+                    description="Historia de 24h"
                     active={contentType === 'story'}
                     onClick={() => setContentType('story')}
                 />
                 <ContentTypeCard
                     icon={Layers}
-                    label="Carousel"
-                    description="Gallery"
+                    label="Carrusel"
+                    description="Galería"
                     active={contentType === 'carousel'}
                     onClick={() => setContentType('carousel')}
                 />
                 <ContentTypeCard
                     icon={Film}
                     label="Reel"
-                    description="Short Video"
+                    description="Video Corto"
                     active={contentType === 'reel'}
                     onClick={() => setContentType('reel')}
                 />
@@ -233,16 +233,16 @@ export default function CreatePostPage() {
             <div className="glass-card p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <Instagram className="w-5 h-5 text-pink-500" />
-                    Publish to Account
+                    Publicar en Cuenta
                 </h3>
                 {accounts.length === 0 ? (
                     <div className="text-center py-4">
-                        <p className="text-gray-400 mb-3">No Instagram accounts connected</p>
-                        <a 
-                            href="/dashboard/accounts" 
+                        <p className="text-gray-400 mb-3">No hay cuentas de Instagram conectadas</p>
+                        <a
+                            href="/dashboard/profile"
                             className="text-primary hover:underline text-sm"
                         >
-                            Connect an account →
+                            Conectar una cuenta →
                         </a>
                     </div>
                 ) : (
@@ -251,11 +251,10 @@ export default function CreatePostPage() {
                             <button
                                 key={account.id}
                                 onClick={() => setSelectedAccountId(account.id)}
-                                className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
-                                    selectedAccountId === account.id
+                                className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedAccountId === account.id
                                         ? 'border-primary bg-primary/20'
                                         : 'border-white/10 bg-white/5 hover:border-white/30'
-                                }`}
+                                    }`}
                             >
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                                     <Instagram className="w-5 h-5 text-white" />
@@ -288,7 +287,7 @@ export default function CreatePostPage() {
                     <div className="glass-card p-6">
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Upload className="w-5 h-5 text-primary" />
-                            Media {contentType === 'carousel' ? '(Multiple)' : '(Single)'}
+                            Multimedia {contentType === 'carousel' ? '(Múltiple)' : '(Individual)'}
                         </h3>
 
                         <label className="block cursor-pointer">
@@ -302,9 +301,9 @@ export default function CreatePostPage() {
                             <div className="border-2 border-dashed border-white/20 hover:border-primary/50 rounded-lg p-8 text-center transition-all">
                                 {preUploadedMediaUrl && mediaFiles.length === 0 ? (
                                     <div className="space-y-3">
-                                        <img 
-                                            src={preUploadedMediaUrl} 
-                                            alt="Imagen del Studio" 
+                                        <img
+                                            src={preUploadedMediaUrl}
+                                            alt="Imagen del Studio"
                                             className="max-h-48 mx-auto rounded-lg shadow-lg"
                                         />
                                         <p className="text-green-400 font-semibold">Imagen del Studio seleccionada</p>
@@ -346,22 +345,22 @@ export default function CreatePostPage() {
                     {/* Caption */}
                     {contentType !== 'story' && (
                         <div className="glass-card p-6">
-                            <h3 className="text-lg font-semibold mb-4">Caption</h3>
+                            <h3 className="text-lg font-semibold mb-4">Pie de Foto</h3>
                             <textarea
                                 value={caption}
                                 onChange={(e) => setCaption(e.target.value)}
-                                placeholder="Write your caption here..."
+                                placeholder="Escribe tu descripción aquí..."
                                 className="w-full h-32 bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                                 maxLength={2200}
                             />
-                            <p className="text-xs text-gray-400 mt-2">{caption.length} / 2200 characters</p>
+                            <p className="text-xs text-gray-400 mt-2">{caption.length} / 2200 caracteres</p>
                         </div>
                     )}
                     {contentType === 'story' && (
                         <div className="glass-card p-4 bg-yellow-500/10 border-yellow-500/20">
                             <p className="text-sm text-yellow-200">
-                                Note: Captions are not strictly supported for Stories via API.
-                                Ensure your visual content includes any necessary text.
+                                Nota: Las descripciones no son estrictamente compatibles con las Historias a través de la API.
+                                Asegúrate de que tu contenido visual incluya cualquier texto necesario.
                             </p>
                         </div>
                     )}
@@ -373,12 +372,12 @@ export default function CreatePostPage() {
                     <div className="glass-card p-6">
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-primary" />
-                            Schedule
+                            Programar
                         </h3>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="text-sm font-medium text-gray-300 mb-2 block">Date</label>
+                                <label className="text-sm font-medium text-gray-300 mb-2 block">Fecha</label>
                                 <Input
                                     type="date"
                                     value={scheduledDate}
@@ -386,7 +385,7 @@ export default function CreatePostPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium text-gray-300 mb-2 block">Time</label>
+                                <label className="text-sm font-medium text-gray-300 mb-2 block">Hora</label>
                                 <Input
                                     type="time"
                                     value={scheduledTime}
@@ -402,7 +401,7 @@ export default function CreatePostPage() {
                                 className="mt-4 p-3 bg-primary/10 border border-primary/30 rounded-lg"
                             >
                                 <p className="text-sm text-primary">
-                                    Scheduled for: {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString()}
+                                    Programado para: {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString()}
                                 </p>
                             </motion.div>
                         )}
@@ -410,7 +409,7 @@ export default function CreatePostPage() {
 
                     {/* Preview */}
                     <div className="glass-card p-6">
-                        <h3 className="text-lg font-semibold mb-4">Preview ({contentType})</h3>
+                        <h3 className="text-lg font-semibold mb-4">Previsualización ({contentType === 'post' ? 'Post' : contentType === 'story' ? 'Historia' : contentType === 'carousel' ? 'Carrusel' : 'Reel'})</h3>
                         <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-lg p-4 aspect-square flex items-center justify-center relative overflow-hidden">
                             {mediaFiles.length > 0 ? (
                                 <div className="text-center w-full h-full flex flex-col items-center justify-center">
@@ -422,7 +421,7 @@ export default function CreatePostPage() {
                                     <p className="text-sm text-gray-400">{mediaFiles[0].name}</p>
                                     {mediaFiles.length > 1 && (
                                         <div className="mt-2 text-xs bg-white/10 px-2 py-1 rounded-full">
-                                            +{mediaFiles.length - 1} more
+                                            +{mediaFiles.length - 1} más
                                         </div>
                                     )}
 
@@ -432,7 +431,7 @@ export default function CreatePostPage() {
                                     )}
                                 </div>
                             ) : (
-                                <p className="text-gray-400">Upload media to preview</p>
+                                <p className="text-gray-400">Sube multimedia para previsualizar</p>
                             )}
                         </div>
                     </div>
@@ -444,7 +443,7 @@ export default function CreatePostPage() {
                             disabled={loading || postingNow || (mediaFiles.length === 0 && !preUploadedMediaUrl)}
                             className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3"
                         >
-                            {loading ? 'Creating...' : scheduledDate ? `Schedule ${contentType === 'story' ? 'Story' : contentType === 'reel' ? 'Reel' : 'Post'}` : 'Save as Draft'}
+                            {loading ? 'Creando...' : scheduledDate ? `Programar ${contentType === 'story' ? 'Historia' : contentType === 'reel' ? 'Reel' : 'Publicación'}` : 'Guardar como Borrador'}
                         </Button>
 
                         <Button
@@ -455,12 +454,12 @@ export default function CreatePostPage() {
                             {postingNow ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Publishing...
+                                    Publicando...
                                 </>
                             ) : (
                                 <>
                                     <Send className="w-4 h-4" />
-                                    Post Now
+                                    Publicar Ahora
                                 </>
                             )}
                         </Button>
@@ -470,7 +469,7 @@ export default function CreatePostPage() {
                             variant="outline"
                             className="w-full"
                         >
-                            Cancel
+                            Cancelar
                         </Button>
                     </div>
                 </div>

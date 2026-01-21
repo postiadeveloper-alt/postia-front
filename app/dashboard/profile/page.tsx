@@ -19,11 +19,11 @@ export default function ProfilePage() {
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'instagram-connected') {
                 if (event.data.success) {
-                    alert('Instagram account connected successfully!');
+                    alert('¡Cuenta de Instagram conectada exitosamente!');
                     loadInstagramAccounts();
                 }
             } else if (event.data?.type === 'instagram-error') {
-                alert('Failed to connect Instagram: ' + event.data.error);
+                alert('Falló la conexión con Instagram: ' + event.data.error);
             }
         };
 
@@ -45,24 +45,24 @@ export default function ProfilePage() {
     const handleRefreshAccount = async (accountId: string) => {
         try {
             await apiService.refreshInstagramAccount(accountId);
-            alert('Account refreshed successfully!');
+            alert('¡Cuenta actualizada exitosamente!');
             loadInstagramAccounts();
         } catch (error: any) {
             console.error('Failed to refresh account:', error);
-            alert('Failed to refresh account: ' + (error.response?.data?.message || error.message));
+            alert('Falló la actualización de la cuenta: ' + (error.response?.data?.message || error.message));
         }
     };
 
     const handleDisconnect = async (accountId: string) => {
-        if (!confirm('Are you sure you want to disconnect this Instagram account?')) return;
+        if (!confirm('¿Estás seguro de que quieres desconectar esta cuenta de Instagram?')) return;
 
         try {
             await apiService.disconnectInstagramAccount(accountId);
-            alert('Account disconnected successfully');
+            alert('Cuenta desconectada exitosamente');
             loadInstagramAccounts();
         } catch (error: any) {
             console.error('Failed to disconnect account:', error);
-            alert('Failed to disconnect account: ' + (error.response?.data?.message || error.message));
+            alert('Falló la desconexión de la cuenta: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -81,7 +81,7 @@ export default function ProfilePage() {
             );
         } catch (error: any) {
             console.error('Failed to get auth URL:', error);
-            alert('Failed to start Instagram connection: ' + (error.response?.data?.message || error.message));
+            alert('Falló el inicio de la conexión con Instagram: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -89,26 +89,26 @@ export default function ProfilePage() {
         <div className="space-y-6 max-w-4xl">
             <div>
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
-                    Profile Settings
+                    Configuración del Perfil
                 </h1>
-                <p className="text-gray-400 mt-1">Manage your account and connected platforms</p>
+                <p className="text-gray-400 mt-1">Administra tu cuenta y plataformas conectadas</p>
             </div>
 
             {/* User Information */}
             <div className="glass-card p-6">
-                <h3 className="text-xl font-semibold mb-6">Personal Information</h3>
+                <h3 className="text-xl font-semibold mb-6">Información Personal</h3>
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                             <User className="w-4 h-4" />
-                            Full Name
+                            Nombre Completo
                         </label>
                         <Input value={user?.fullName || ''} disabled />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                             <Mail className="w-4 h-4" />
-                            Email
+                            Correo Electrónico
                         </label>
                         <Input value={user?.email || ''} disabled />
                     </div>
@@ -116,7 +116,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                                 <Building2 className="w-4 h-4" />
-                                Agency Name
+                                Nombre de la Agencia
                             </label>
                             <Input value={user.agencyName} disabled />
                         </div>
@@ -129,18 +129,18 @@ export default function ProfilePage() {
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-semibold flex items-center gap-2">
                         <Instagram className="w-5 h-5 text-pink-500" />
-                        Connected Instagram Accounts
+                        Cuentas de Instagram Conectadas
                     </h3>
                     <Button onClick={handleConnectAccount} className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600">
-                        Connect New Account
+                        Conectar Nueva Cuenta
                     </Button>
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-8 text-gray-400">Loading accounts...</div>
+                    <div className="text-center py-8 text-gray-400">Cargando cuentas...</div>
                 ) : accounts.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
-                        No Instagram accounts connected yet. Connect one to get started!
+                        Aún no hay cuentas de Instagram conectadas. ¡Conecta una para comenzar!
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -152,15 +152,15 @@ export default function ProfilePage() {
                                     </div>
                                     <div>
                                         <p className="font-semibold">{account.username}</p>
-                                        <p className="text-sm text-gray-400">{account.followers?.toLocaleString()} followers</p>
+                                        <p className="text-sm text-gray-400">{account.followers?.toLocaleString()} seguidores</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button onClick={() => handleRefreshAccount(account.id)} variant="outline" size="sm">
-                                        Refresh
+                                        Actualizar
                                     </Button>
                                     <Button onClick={() => handleDisconnect(account.id)} variant="ghost" size="sm" className="text-red-400 hover:text-red-300">
-                                        Disconnect
+                                        Desconectar
                                     </Button>
                                 </div>
                             </div>
@@ -171,14 +171,14 @@ export default function ProfilePage() {
 
             {/* Danger Zone */}
             <div className="glass-card p-6 border-red-500/20">
-                <h3 className="text-xl font-semibold mb-4 text-red-400">Danger Zone</h3>
+                <h3 className="text-xl font-semibold mb-4 text-red-400">Zona de Peligro</h3>
                 <div className="space-y-3">
                     <Button
                         onClick={logout}
                         className="w-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
                     >
                         <LogOut className="w-4 h-4 mr-2" />
-                        Sign Out
+                        Cerrar Sesión
                     </Button>
                 </div>
             </div>

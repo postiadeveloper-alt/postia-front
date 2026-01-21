@@ -90,10 +90,12 @@ export default function StudioPage() {
         try {
             await apiService.generateAITemplates(accountId);
             await loadLibrary();
-            alert('AI Templates generated successfully!');
+            await apiService.generateAITemplates(accountId);
+            await loadLibrary();
+            alert('¡Plantillas de IA generadas exitosamente!');
         } catch (error) {
             console.error('AI Generation failed:', error);
-            alert('AI Template generation failed. Make sure you have business colors set in the Business Profile.');
+            alert('Falló la generación de plantillas de IA. Asegúrate de tener configurados los colores de la marca en el Perfil de Negocio.');
         }
         setIsAIGenerating(false);
     };
@@ -131,8 +133,8 @@ export default function StudioPage() {
         <div className="space-y-8">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-8 rounded-2xl text-white">
-                <h1 className="text-3xl font-bold mb-2">Creative Studio</h1>
-                <p className="text-indigo-200">Combine your templates with content to create stunning visuals.</p>
+                <h1 className="text-3xl font-bold mb-2">Estudio Creativo</h1>
+                <p className="text-indigo-200">Combina tus plantillas con contenido para crear visuales impresionantes.</p>
             </div>
 
             {/* Tabs */}
@@ -145,7 +147,7 @@ export default function StudioPage() {
                         }`}
                 >
                     <Sparkles className="w-5 h-5" />
-                    Create New
+                    Crear Nuevo
                 </button>
                 <button
                     onClick={() => setActiveTab('gallery')}
@@ -155,7 +157,7 @@ export default function StudioPage() {
                         }`}
                 >
                     <ImageIcon className="w-5 h-5" />
-                    Gallery ({outputs.length})
+                    Galería ({outputs.length})
                 </button>
             </div>
 
@@ -172,7 +174,7 @@ export default function StudioPage() {
                             <div className="flex justify-between items-center">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
                                     <Zap className="w-5 h-5 text-yellow-400" />
-                                    Templates ({templates.length})
+                                    Plantillas ({templates.length})
                                 </h2>
                                 <div className="flex gap-2">
                                     <button
@@ -181,11 +183,11 @@ export default function StudioPage() {
                                         className="bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
                                     >
                                         {isAIGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                        Generate with AI
+                                        Generar con IA
                                     </button>
                                     <label className="cursor-pointer bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                                         <Upload className="w-4 h-4 inline-block mr-2" />
-                                        Upload New
+                                        Subir Nuevo
                                         <input
                                             type="file"
                                             className="hidden"
@@ -199,7 +201,7 @@ export default function StudioPage() {
                             {templates.length === 0 ? (
                                 <div className="text-center py-12 text-gray-400">
                                     <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                    <p>No templates yet. Upload your first template!</p>
+                                    <p>Aún no hay plantillas. ¡Sube tu primera plantilla!</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2">
@@ -237,11 +239,11 @@ export default function StudioPage() {
                             <div className="flex justify-between items-center">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
                                     <ImageIcon className="w-5 h-5 text-blue-400" />
-                                    Content ({contents.length})
+                                    Contenido ({contents.length})
                                 </h2>
                                 <label className="cursor-pointer bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                                     <Upload className="w-4 h-4 inline-block mr-2" />
-                                    Upload New
+                                    Subir Nuevo
                                     <input
                                         type="file"
                                         className="hidden"
@@ -254,7 +256,7 @@ export default function StudioPage() {
                             {contents.length === 0 ? (
                                 <div className="text-center py-12 text-gray-400">
                                     <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                    <p>No content yet. Upload your first image!</p>
+                                    <p>Aún no hay contenido. ¡Sube tu primera imagen!</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2">
@@ -304,12 +306,12 @@ export default function StudioPage() {
                             {isGenerating ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    Creating Magic...
+                                    Creando Magia...
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="w-5 h-5" />
-                                    Generate Design
+                                    Generar Diseño
                                 </>
                             )}
                         </button>
@@ -327,13 +329,13 @@ export default function StudioPage() {
                     {outputs.length === 0 ? (
                         <div className="glass-card p-12 rounded-xl text-center">
                             <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-500" />
-                            <h3 className="text-xl font-semibold text-gray-300 mb-2">No designs yet</h3>
-                            <p className="text-gray-500 mb-6">Create your first design by combining a template with content.</p>
+                            <h3 className="text-xl font-semibold text-gray-300 mb-2">Aún no hay diseños</h3>
+                            <p className="text-gray-500 mb-6">Crea tu primer diseño combinando una plantilla con contenido.</p>
                             <button
                                 onClick={() => setActiveTab('create')}
                                 className="bg-gradient-to-r from-primary to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:scale-105 transition-transform"
                             >
-                                Start Creating
+                                Empezar a Crear
                             </button>
                         </div>
                     ) : (
@@ -454,7 +456,7 @@ export default function StudioPage() {
                                 className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-semibold transition-colors"
                             >
                                 <ExternalLink className="w-4 h-4" />
-                                View Full Image
+                                Ver Imagen Completa
                             </a>
                         </div>
                     </motion.div>
@@ -485,10 +487,10 @@ export default function StudioPage() {
                         </div>
                         <div className="space-y-2">
                             <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
-                                Generating Templates
+                                Generando Plantillas
                             </h3>
                             <p className="text-gray-400 text-sm">
-                                Our AI is crafting high-end designs using your brand colors and logo...
+                                Nuestra IA está creando diseños de alta gama usando los colores y logo de tu marca...
                             </p>
                         </div>
                         <div className="flex justify-center gap-1">

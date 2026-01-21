@@ -13,10 +13,10 @@ interface OnboardingModalProps {
 }
 
 const INDUSTRIES = [
-    'Technology', 'Fashion & Apparel', 'Health & Wellness', 'Beauty & Cosmetics',
-    'Food & Beverage', 'Real Estate', 'Finance', 'Education', 'Travel & Tourism',
-    'Entertainment', 'Professional Services', 'Retail / E-commerce', 'Home & Garden',
-    'Automotive', 'Art & Design', 'Non-Profit', 'Other'
+    'Tecnología', 'Moda y Ropa', 'Salud y Bienestar', 'Belleza y Cosmética',
+    'Alimentos y Bebidas', 'Bienes Raíces', 'Finanzas', 'Educación', 'Viajes y Turismo',
+    'Entretenimiento', 'Servicios Profesionales', 'Retail / E-commerce', 'Hogar y Jardín',
+    'Automotriz', 'Arte y Diseño', 'Sin Fines de Lucro', 'Otro'
 ];
 
 export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
@@ -64,7 +64,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                 }
             } else if (event.data?.type === 'instagram-error') {
                 setIsConnecting(false);
-                alert('Failed to connect Instagram: ' + event.data.error);
+                alert('Falló la conexión con Instagram: ' + event.data.error);
             }
         };
 
@@ -83,13 +83,13 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
             window.open(
                 authUrl,
-                'Connect Instagram',
+                'Conectar Instagram',
                 `width=${width},height=${height},left=${left},top=${top}`
             );
         } catch (error: any) {
             console.error('Failed to get auth URL:', error);
             setIsConnecting(false);
-            alert('Failed to start Instagram connection: ' + (error.message || 'Unknown error'));
+            alert('Falló el inicio de la conexión con Instagram: ' + (error.message || 'Error desconocido'));
         }
     };
 
@@ -123,7 +123,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
     const handleCreateProfile = async () => {
         if (!connectedAccount) {
-            alert('Error: No connected account found.');
+            alert('Error: No se encontró una cuenta conectada.');
             return;
         }
 
@@ -133,7 +133,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
         // If missing from the message event, fetch it directly from the API.
         if (!accountId) {
             try {
-                console.log('Verifying account connection status...');
+                console.log('Verificando estado de conexión de la cuenta...');
                 const accounts = await apiService.getInstagramAccounts();
                 const match = accounts.find((a: any) =>
                     a.username === connectedAccount.username ||
@@ -152,7 +152,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
         if (!accountId) {
             console.error('Connected account has no ID:', connectedAccount);
-            alert('Error: Could not retrieve Account ID. Please try refreshing the page.');
+            alert('Error: No se pudo recuperar el ID de la cuenta. Por favor, intenta recargar la página.');
             return;
         }
 
@@ -180,7 +180,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                 displayMessage = serverMessage;
             }
 
-            alert('Failed to create profile: ' + displayMessage);
+            alert('Error al crear el perfil: ' + displayMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -359,11 +359,11 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                                 className="w-full h-9 bg-gray-800/50 border border-white/10 rounded-md px-3 text-sm text-white focus:outline-none"
                                             >
                                                 <option value="" className="bg-gray-900">Estilo</option>
-                                                <option value="Minimalist" className="bg-gray-900">Minimalista</option>
-                                                <option value="Bold" className="bg-gray-900">Audaz</option>
+                                                <option value="Minimalista" className="bg-gray-900">Minimalista</option>
+                                                <option value="Audaz" className="bg-gray-900">Audaz</option>
                                                 <option value="Vintage" className="bg-gray-900">Vintage</option>
-                                                <option value="Luxury" className="bg-gray-900">Lujo</option>
-                                                <option value="Playful" className="bg-gray-900">Juguetón</option>
+                                                <option value="Lujo" className="bg-gray-900">Lujo</option>
+                                                <option value="Juguetón" className="bg-gray-900">Juguetón</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1">
@@ -374,10 +374,10 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                                 className="w-full h-9 bg-gray-800/50 border border-white/10 rounded-md px-3 text-sm text-white focus:outline-none"
                                             >
                                                 <option value="" className="bg-gray-900">Tono</option>
-                                                <option value="Professional" className="bg-gray-900">Profesional</option>
-                                                <option value="Friendly" className="bg-gray-900">Amigable</option>
-                                                <option value="Humorous" className="bg-gray-900">Humorístico</option>
-                                                <option value="Inspirational" className="bg-gray-900">Inspiracional</option>
+                                                <option value="Profesional" className="bg-gray-900">Profesional</option>
+                                                <option value="Amigable" className="bg-gray-900">Amigable</option>
+                                                <option value="Humorístico" className="bg-gray-900">Humorístico</option>
+                                                <option value="Inspiracional" className="bg-gray-900">Inspiracional</option>
                                             </select>
                                         </div>
                                     </div>

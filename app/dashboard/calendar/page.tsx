@@ -37,7 +37,7 @@ export default function CalendarPage() {
     const [loading, setLoading] = useState(true);
     const [loadingProfiles, setLoadingProfiles] = useState(true);
     const [loadingStrategies, setLoadingStrategies] = useState(false);
-    
+
     // Modal states
     const [showStrategyModal, setShowStrategyModal] = useState(false);
     const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
@@ -116,15 +116,15 @@ export default function CalendarPage() {
                 selectedDays: data.selectedDays,
                 monthYear: data.monthYear,
             });
-            
+
             // Set the selected profile to show the generated strategies
             setSelectedProfile(data.businessProfileId);
-            
+
             // Manually load content strategies for this profile
             const monthYear = format(currentDate, 'yyyy-MM');
             const strategiesData = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
             setContentStrategies(strategiesData || []);
-            
+
             // Close modal is handled by the modal itself
         } catch (error) {
             console.error('Failed to generate strategy:', error);
@@ -192,23 +192,21 @@ export default function CalendarPage() {
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => setSelectedProfile('all')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                selectedProfile === 'all'
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedProfile === 'all'
                                     ? 'bg-primary text-white shadow-lg shadow-primary/25'
                                     : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                            }`}
+                                }`}
                         >
-                            All Profiles
+                            Todos los Perfiles
                         </button>
                         {businessProfiles.map((profile) => (
                             <button
                                 key={profile.instagramAccount.id}
                                 onClick={() => setSelectedProfile(profile.instagramAccount.id)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                                    selectedProfile === profile.instagramAccount.id
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${selectedProfile === profile.instagramAccount.id
                                         ? 'bg-primary text-white shadow-lg shadow-primary/25'
                                         : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                                }`}
+                                    }`}
                             >
                                 {profile.instagramAccount.profilePictureUrl && (
                                     <img
