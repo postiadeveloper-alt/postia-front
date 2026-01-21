@@ -29,22 +29,13 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
             if (event.data?.type === 'instagram-connected') {
                 console.log('Received instagram-connected event:', event.data);
                 if (event.data.success) {
-                    const account = event.data.account;
-
-                    // Version Check: Detect if backend is sending old data structure
-                    if (account && 'followers' in account && !('followersCount' in account)) {
-                        alert('System Error: The backend server is running an outdated version. Please redeploy the backend.');
-                        console.error('Backend Version Mismatch: Received old "followers" key instead of "followersCount".');
-                        return;
-                    }
-
-                    setConnectedAccount(account);
+                    setConnectedAccount(event.data.account);
 
                     // Auto-fill some data if available
                     setFormData(prev => ({
                         ...prev,
-                        brandName: account.name || account.username || '',
-                        brandDescription: account.biography || '',
+                        brandName: event.data.account.name || event.data.account.username || '',
+                        brandDescription: event.data.account.biography || '',
                     }));
                     setStep(2);
                     setIsConnecting(false);
@@ -86,9 +77,33 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
             return;
         }
 
-        if (!connectedAccount.id) {
+        let accountId = connectedAccount.id;
+
+        // Fallback: If ID is missing (e.g. outdated backend or serialization issue),
+        // try to find the account by username from the API list.
+        if (!accountId) {
+            try {
+                console.log('Account ID missing, attempting to fetch from API...');
+                const accounts = await apiService.getInstagramAccounts();
+                const match = accounts.find((a: any) =>
+                    a.username === connectedAccount.username ||
+                    a.username === connectedAccount.name
+                );
+
+                if (match) {
+                    console.log('Found matching account via API:', match);
+                    accountId = match.id;
+                    // Update local state with full account details including ID
+                    setConnectedAccount(match);
+                }
+            } catch (err) {
+                console.error('Failed to fetch accounts for fallback:', err);
+            }
+        }
+
+        if (!accountId) {
             console.error('Connected account has no ID:', connectedAccount);
-            alert('Error: Connected account has no ID. Please try connecting again.');
+            alert('Error: Could not retrieve Account ID. Please try refreshing the page.');
             return;
         }
 
@@ -98,7 +113,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
             brandName: formData.brandName,
             industry: formData.industry,
             brandDescription: formData.brandDescription,
-            instagramAccountId: connectedAccount.id,
+            instagramAccountId: accountId,
         };
 
         console.log('Creating business profile with payload:', payload);
