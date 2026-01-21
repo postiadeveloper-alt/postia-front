@@ -371,12 +371,29 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium text-gray-300">Colores de Marca</label>
-                                                <Input
-                                                    value={formData.brandColors}
-                                                    onChange={(e) => setFormData({ ...formData, brandColors: e.target.value })}
-                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                    placeholder="#FF0000, #00FF00 (separados por coma)"
-                                                />
+                                                <div className="relative flex gap-2">
+                                                    <Input
+                                                        value={formData.brandColors}
+                                                        onChange={(e) => setFormData({ ...formData, brandColors: e.target.value })}
+                                                        className="bg-white/5 border-white/10 text-white focus:border-primary pl-12"
+                                                        placeholder="#FF0000, #00FF00"
+                                                    />
+                                                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden border border-white/20 cursor-pointer">
+                                                        <input
+                                                            type="color"
+                                                            className="w-[150%] h-[150%] -m-[25%] cursor-pointer"
+                                                            onChange={(e) => {
+                                                                const newColor = e.target.value.toUpperCase();
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    brandColors: prev.brandColors
+                                                                        ? `${prev.brandColors}, ${newColor}`
+                                                                        : newColor
+                                                                }));
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium text-gray-300">Temas de Contenido</label>
