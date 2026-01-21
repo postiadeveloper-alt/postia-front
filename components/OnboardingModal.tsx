@@ -12,6 +12,13 @@ interface OnboardingModalProps {
     onComplete: () => void;
 }
 
+const INDUSTRIES = [
+    'Technology', 'Fashion & Apparel', 'Health & Wellness', 'Beauty & Cosmetics',
+    'Food & Beverage', 'Real Estate', 'Finance', 'Education', 'Travel & Tourism',
+    'Entertainment', 'Professional Services', 'Retail / E-commerce', 'Home & Garden',
+    'Automotive', 'Art & Design', 'Non-Profit', 'Other'
+];
+
 export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
     const [step, setStep] = useState(1);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -20,6 +27,15 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
         brandName: '',
         industry: '',
         brandDescription: '',
+        targetAudience: '',
+        brandValues: '',
+        visualStyle: '',
+        communicationTone: '',
+        brandColors: '', // Stored as comma-separated string for input
+        contentThemes: '',
+        productCategories: '',
+        prohibitedTopics: '',
+        contentGuidelines: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,7 +43,7 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
         // Listen for messages from the OAuth popup
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'instagram-connected') {
-                console.log('Received instagram-connected event:', event.data);
+
                 if (event.data.success) {
                     setConnectedAccount(event.data.account);
 
@@ -79,11 +95,11 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
         let accountId = connectedAccount.id;
 
-        // Fallback: If ID is missing (e.g. outdated backend or serialization issue),
-        // try to find the account by username from the API list.
+        // Safety check: ensure we have the account ID before proceeding.
+        // If missing from the message event, fetch it directly from the API.
         if (!accountId) {
             try {
-                console.log('Account ID missing, attempting to fetch from API...');
+                console.log('Verifying account connection status...');
                 const accounts = await apiService.getInstagramAccounts();
                 const match = accounts.find((a: any) =>
                     a.username === connectedAccount.username ||
@@ -91,13 +107,12 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                 );
 
                 if (match) {
-                    console.log('Found matching account via API:', match);
+                    console.log('Account verified successfully.');
                     accountId = match.id;
-                    // Update local state with full account details including ID
                     setConnectedAccount(match);
                 }
             } catch (err) {
-                console.error('Failed to fetch accounts for fallback:', err);
+                console.error('Failed to verify account status:', err);
             }
         }
 
@@ -109,11 +124,24 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
 
         setIsSubmitting(true);
 
+        // Helper to parse comma-separated strings to arrays
+        const parseArray = (str: string) => str.split(',').map(s => s.trim()).filter(Boolean);
+
         const payload = {
+            instagramAccountId: accountId,
             brandName: formData.brandName,
             industry: formData.industry,
             brandDescription: formData.brandDescription,
-            instagramAccountId: accountId,
+            targetAudience: formData.targetAudience,
+            brandValues: formData.brandValues,
+            visualStyle: formData.visualStyle,
+            communicationTone: formData.communicationTone,
+            contentGuidelines: formData.contentGuidelines,
+            // Parse arrays
+            brandColors: parseArray(formData.brandColors),
+            contentThemes: parseArray(formData.contentThemes),
+            productCategories: parseArray(formData.productCategories),
+            prohibitedTopics: parseArray(formData.prohibitedTopics),
         };
 
         console.log('Creating business profile with payload:', payload);
@@ -204,14 +232,14 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                 </div>
                             </div>
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                                 <div className="text-center space-y-2">
                                     <div className="inline-flex p-3 bg-green-500/20 rounded-xl mb-2 text-green-400">
                                         <Check className="w-6 h-6" />
                                     </div>
                                     <h2 className="text-2xl font-bold text-white">¡Cuenta Conectada!</h2>
                                     <p className="text-gray-400">
-                                        Ahora cuéntanos un poco sobre tu marca para personalizar tu experiencia.
+                                        Completa tu perfil de negocio para obtener los mejores resultados con la IA.
                                     </p>
                                 </div>
 
@@ -241,9 +269,10 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                         </div>
                                     )}
 
-                                    <div className="space-y-4">
+                                    {/* Essential Info */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Nombre de la Marca</label>
+                                            <label className="text-sm font-medium text-gray-300">Nombre de la Marca <span className="text-red-400">*</span></label>
                                             <div className="relative">
                                                 <Building2 className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
                                                 <Input
@@ -256,22 +285,138 @@ export default function OnboardingModal({ isOpen, onComplete }: OnboardingModalP
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Industria</label>
-                                            <Input
+                                            <label className="text-sm font-medium text-gray-300">Industria <span className="text-red-400">*</span></label>
+                                            <select
                                                 value={formData.industry}
                                                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                                                className="w-full h-10 bg-white/5 border border-white/10 rounded-md px-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                            >
+                                                <option value="" className="bg-gray-900">Seleccionar Industria</option>
+                                                {INDUSTRIES.map(ind => (
+                                                    <option key={ind} value={ind} className="bg-gray-900">{ind}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">Descripción de la Marca</label>
+                                        <textarea
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-gray-600 min-h-[80px] resize-none"
+                                            placeholder="Describe qué hace tu negocio, tu misión y qué te hace único..."
+                                            value={formData.brandDescription}
+                                            onChange={(e) => setFormData({ ...formData, brandDescription: e.target.value })}
+                                        />
+                                    </div>
+
+                                    {/* Brand Details */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-gray-300">Público Objetivo</label>
+                                            <Input
+                                                value={formData.targetAudience}
+                                                onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
                                                 className="bg-white/5 border-white/10 text-white focus:border-primary"
-                                                placeholder="Ej. Marketing, Belleza, Tecnología..."
+                                                placeholder="Ej. Mujeres 25-45 años interesadas en moda"
                                             />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-gray-300">Valores de Marca</label>
+                                            <Input
+                                                value={formData.brandValues}
+                                                onChange={(e) => setFormData({ ...formData, brandValues: e.target.value })}
+                                                className="bg-white/5 border-white/10 text-white focus:border-primary"
+                                                placeholder="Ej. Sostenibilidad, Innovación, Calidad"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Style & Tone */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-gray-300">Estilo Visual</label>
+                                            <select
+                                                value={formData.visualStyle}
+                                                onChange={(e) => setFormData({ ...formData, visualStyle: e.target.value })}
+                                                className="w-full h-10 bg-white/5 border border-white/10 rounded-md px-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                            >
+                                                <option value="" className="bg-gray-900">Seleccionar Estilo</option>
+                                                <option value="Minimalist" className="bg-gray-900">Minimalista</option>
+                                                <option value="Bold" className="bg-gray-900">Audaz / Llamativo</option>
+                                                <option value="Vintage" className="bg-gray-900">Vintage / Retro</option>
+                                                <option value="Luxury" className="bg-gray-900">Lujo / Elegante</option>
+                                                <option value="Playful" className="bg-gray-900">Divertido / Juguetón</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-gray-300">Tono de Comunicación</label>
+                                            <select
+                                                value={formData.communicationTone}
+                                                onChange={(e) => setFormData({ ...formData, communicationTone: e.target.value })}
+                                                className="w-full h-10 bg-white/5 border border-white/10 rounded-md px-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                            >
+                                                <option value="" className="bg-gray-900">Seleccionar Tono</option>
+                                                <option value="Professional" className="bg-gray-900">Profesional</option>
+                                                <option value="Friendly" className="bg-gray-900">Amigable / Cercano</option>
+                                                <option value="Humorous" className="bg-gray-900">Humorístico</option>
+                                                <option value="Inspirational" className="bg-gray-900">Inspiracional</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Strategy Lists */}
+                                    <div className="space-y-4 pt-2">
+                                        <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Estrategia de Contenido</h3>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-gray-300">Colores de Marca</label>
+                                                <Input
+                                                    value={formData.brandColors}
+                                                    onChange={(e) => setFormData({ ...formData, brandColors: e.target.value })}
+                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
+                                                    placeholder="#FF0000, #00FF00 (separados por coma)"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-gray-300">Temas de Contenido</label>
+                                                <Input
+                                                    value={formData.contentThemes}
+                                                    onChange={(e) => setFormData({ ...formData, contentThemes: e.target.value })}
+                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
+                                                    placeholder="Tips, Noticias, Promociones..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-gray-300">Categorías de Producto</label>
+                                                <Input
+                                                    value={formData.productCategories}
+                                                    onChange={(e) => setFormData({ ...formData, productCategories: e.target.value })}
+                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
+                                                    placeholder="Ropa, Accesorios, Calzado..."
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-gray-300">Temas Prohibidos</label>
+                                                <Input
+                                                    value={formData.prohibitedTopics}
+                                                    onChange={(e) => setFormData({ ...formData, prohibitedTopics: e.target.value })}
+                                                    className="bg-white/5 border-white/10 text-white focus:border-primary"
+                                                    placeholder="Política, Religión..."
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Descripción Breve</label>
+                                            <label className="text-sm font-medium text-gray-300">Guía de Contenido Adicional</label>
                                             <textarea
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-gray-600 min-h-[80px] resize-none"
-                                                placeholder="Describe qué hace tu negocio..."
-                                                value={formData.brandDescription}
-                                                onChange={(e) => setFormData({ ...formData, brandDescription: e.target.value })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-gray-600 min-h-[60px] resize-none"
+                                                placeholder="Instrucciones específicas para la IA..."
+                                                value={formData.contentGuidelines}
+                                                onChange={(e) => setFormData({ ...formData, contentGuidelines: e.target.value })}
                                             />
                                         </div>
                                     </div>
