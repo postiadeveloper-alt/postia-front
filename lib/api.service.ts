@@ -153,6 +153,11 @@ class ApiService {
     }
 
     // Analytics endpoints
+    async getAccountOverview(accountId: string) {
+        const response = await this.api.get(`/analytics/account/${accountId}/overview`);
+        return response.data;
+    }
+
     async getAccountInsights(accountId: string, period?: string, since?: string, until?: string) {
         const response = await this.api.get(`/analytics/account/${accountId}`, {
             params: { period, since, until },
@@ -201,6 +206,26 @@ class ApiService {
         const response = await this.api.get(`/trending/suggestions/${accountId}`, {
             params: { limit },
         });
+        return response.data;
+    }
+
+    async getTrendingKeywords(accountId: string) {
+        const response = await this.api.get(`/trending/keywords/${accountId}`);
+        return response.data;
+    }
+
+    async getTrendingTechniques(accountId: string) {
+        const response = await this.api.get(`/trending/techniques/${accountId}`);
+        return response.data;
+    }
+
+    async getTrendingTechnologies(accountId: string) {
+        const response = await this.api.get(`/trending/technologies/${accountId}`);
+        return response.data;
+    }
+
+    async getInspiringPosts(accountId: string) {
+        const response = await this.api.get(`/trending/inspiring-posts/${accountId}`);
         return response.data;
     }
 
@@ -298,8 +323,14 @@ class ApiService {
     // Content Strategy endpoints
     async generateContentStrategy(data: {
         businessProfileId: string;
-        selectedDays: number[];
+        selectedDates: string[];
         monthYear: string;
+        formatDistribution?: {
+            reels: number;
+            stories: number;
+            carousels: number;
+            staticPosts: number;
+        };
     }) {
         const response = await this.api.post('/content-strategy/generate', data);
         return response.data;

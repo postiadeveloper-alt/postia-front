@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import apiService from '@/lib/api.service';
+import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
 import { getImageUrl } from '@/lib/utils';
-import { Calendar, Clock, Plus, Filter, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Plus, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -32,10 +33,8 @@ export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [posts, setPosts] = useState<any[]>([]);
     const [contentStrategies, setContentStrategies] = useState<any[]>([]);
-    const [businessProfiles, setBusinessProfiles] = useState<any[]>([]);
-    const [selectedProfile, setSelectedProfile] = useState<string>('all');
+    const { businessProfiles, selectedProfile, setSelectedProfile, loading: loadingProfiles } = useBusinessProfile();
     const [loading, setLoading] = useState(true);
-    const [loadingProfiles, setLoadingProfiles] = useState(true);
     const [loadingStrategies, setLoadingStrategies] = useState(false);
 
     // Modal states
@@ -45,25 +44,14 @@ export default function CalendarPage() {
     const [generatingStrategy, setGeneratingStrategy] = useState(false);
 
     useEffect(() => {
-        loadBusinessProfiles();
         loadPosts();
-    }, []);
+    }, [selectedProfile]);
 
     useEffect(() => {
-        loadPosts();
-        loadContentStrategies();
-    }, [selectedProfile, currentDate]);
-
-    const loadBusinessProfiles = async () => {
-        try {
-            const data = await apiService.getBusinessProfiles();
-            setBusinessProfiles(data || []);
-        } catch (error) {
-            console.error('Failed to load business profiles:', error);
-        } finally {
-            setLoadingProfiles(false);
+        if (businessProfiles.length > 0) {
+            loadContentStrategies();
         }
-    };
+    }, [selectedProfile, currentDate, businessProfiles.length]);
 
     const loadPosts = async () => {
         try {
@@ -78,19 +66,33 @@ export default function CalendarPage() {
     };
 
     const loadContentStrategies = async () => {
-        if (selectedProfile === 'all') {
-            setContentStrategies([]);
-            return;
-        }
-
         setLoadingStrategies(true);
         try {
             const monthYear = format(currentDate, 'yyyy-MM');
-            // Find the business profile ID from the instagram account ID
-            const profile = businessProfiles.find(p => p.instagramAccount?.id === selectedProfile);
-            if (profile) {
-                const data = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
-                setContentStrategies(data || []);
+            
+            if (selectedProfile === 'all') {
+                // Load strategies for all profiles
+                const allStrategies: any[] = [];
+                for (const profile of businessProfiles) {
+                    try {
+                        const data = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
+                        if (data && data.length > 0) {
+                            allStrategies.push(...data);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to load strategies for profile ${profile.id}:`, error);
+                    }
+                }
+                setContentStrategies(allStrategies);
+            } else {
+                // Load strategies for selected profile
+                const profile = businessProfiles.find(p => p.instagramAccount?.id === selectedProfile);
+                if (profile) {
+                    const data = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
+                    setContentStrategies(data || []);
+                } else {
+                    setContentStrategies([]);
+                }
             }
         } catch (error) {
             console.error('Failed to load content strategies:', error);
@@ -102,8 +104,14 @@ export default function CalendarPage() {
 
     const handleGenerateStrategy = async (data: {
         businessProfileId: string;
-        selectedDays: number[];
+        selectedDates: string[];
         monthYear: string;
+        formatDistribution?: {
+            reels: number;
+            stories: number;
+            carousels: number;
+            staticPosts: number;
+        };
     }) => {
         setGeneratingStrategy(true);
         try {
@@ -113,8 +121,9 @@ export default function CalendarPage() {
 
             await apiService.generateContentStrategy({
                 businessProfileId: profile.id,
-                selectedDays: data.selectedDays,
+                selectedDates: data.selectedDates,
                 monthYear: data.monthYear,
+                formatDistribution: data.formatDistribution,
             });
 
             // Set the selected profile to show the generated strategies
@@ -179,53 +188,6 @@ export default function CalendarPage() {
                         <Plus className="w-5 h-5" />
                         Crear Contenido
                     </Link>
-                </div>
-            </div>
-
-            {/* Business Profile Filter */}
-            <div className="glass-card p-4">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Filter className="w-5 h-5 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-300">Filtrar por Perfil de Negocio:</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            onClick={() => setSelectedProfile('all')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedProfile === 'all'
-                                    ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                                }`}
-                        >
-                            Todos los Perfiles
-                        </button>
-                        {businessProfiles.map((profile) => (
-                            <button
-                                key={profile.instagramAccount.id}
-                                onClick={() => setSelectedProfile(profile.instagramAccount.id)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${selectedProfile === profile.instagramAccount.id
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                                    }`}
-                            >
-                                {profile.instagramAccount.profilePictureUrl && (
-                                    <img
-                                        src={profile.instagramAccount.profilePictureUrl}
-                                        alt={profile.brandName}
-                                        className="w-5 h-5 rounded-full"
-                                    />
-                                )}
-                                <span>{profile.brandName}</span>
-                                <span className="text-xs opacity-75">@{profile.instagramAccount.username}</span>
-                            </button>
-                        ))}
-                    </div>
-                    {loadingProfiles && (
-                        <div className="flex items-center gap-2 text-gray-400">
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
-                            <span className="text-sm">Cargando perfiles...</span>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -300,7 +262,7 @@ export default function CalendarPage() {
                                                 title={`${formatIcon} ${strategy.hook}`}
                                             >
                                                 <div className="flex items-center gap-1">
-                                                    <Sparkles className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                                                    <span className="text-sm flex-shrink-0">{formatIcon}</span>
                                                     <span className="truncate">
                                                         {strategy.hook?.substring(0, 12) || 'Contenido IA'}
                                                     </span>
