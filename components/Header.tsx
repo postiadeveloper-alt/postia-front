@@ -385,7 +385,7 @@ export function Header() {
                                 </div>
 
                                 <p className="text-xs text-gray-500">
-                                    Podrás editar más detalles del perfil de negocio después en la sección "Negocio".
+                                    Podrás editar más detalles del perfil de negocio después en la sección &quot;Negocio&quot;.
                                 </p>
                             </div>
 

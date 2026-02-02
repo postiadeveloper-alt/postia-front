@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Upload, Image as ImageIcon, Zap, Check, Sparkles, Download, ExternalLink, Loader2, X, Send } from 'lucide-react';
@@ -38,25 +38,7 @@ export default function StudioPage() {
         router.push('/dashboard/posts/create');
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
-        setIsLoading(true);
-        try {
-            const accounts = await apiService.getInstagramAccounts();
-            if (accounts && accounts.length > 0) {
-                setAccountId(accounts[0].id);
-            }
-            await loadLibrary();
-        } catch (error) {
-            console.error('Failed to load data:', error);
-        }
-        setIsLoading(false);
-    };
-
-    const loadLibrary = async () => {
+    const loadLibrary = useCallback(async () => {
         try {
             const [t, c, o] = await Promise.all([
                 apiService.listTemplates(),
@@ -69,7 +51,25 @@ export default function StudioPage() {
         } catch (error) {
             console.error('Failed to load library:', error);
         }
-    };
+    }, []);
+
+    const loadData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const accounts = await apiService.getInstagramAccounts();
+            if (accounts && accounts.length > 0) {
+                setAccountId(accounts[0].id);
+            }
+            await loadLibrary();
+        } catch (error) {
+            console.error('Failed to load data:', error);
+        }
+        setIsLoading(false);
+    }, [loadLibrary]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleUpload = async (type: 'template' | 'content', file: File) => {
         try {

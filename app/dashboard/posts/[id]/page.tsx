@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import apiService from '@/lib/api.service';
 import { Calendar, Clock, Image as ImageIcon, Trash2, Send } from 'lucide-react';
@@ -13,13 +13,7 @@ export default function PostDetailPage() {
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (params.id) {
-            loadPost();
-        }
-    }, [params.id]);
-
-    const loadPost = async () => {
+    const loadPost = useCallback(async () => {
         try {
             const posts = await apiService.getPosts();
             const foundPost = posts.find((p: any) => p.id === params.id);
@@ -29,7 +23,13 @@ export default function PostDetailPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [params.id]);
+
+    useEffect(() => {
+        if (params.id) {
+            loadPost();
+        }
+    }, [params.id, loadPost]);
 
     const handlePublish = async () => {
         try {

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import apiService from '@/lib/api.service';
 import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
-import { TrendingUp, BarChart3, Sparkles, Users, Image, AlertCircle, RefreshCw } from 'lucide-react';
+import { TrendingUp, BarChart3, Sparkles, Users, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
+import { useCallback } from 'react';
 
 interface AccountOverview {
     accountInfo: {
@@ -44,20 +45,12 @@ export default function AnalyticsPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (selectedProfile && selectedProfile !== 'all') {
-            loadAnalytics();
-        } else {
-            setOverview(null);
-        }
-    }, [selectedProfile]);
-
-    const loadAnalytics = async () => {
+    const loadAnalytics = useCallback(async () => {
         if (!selectedProfile || selectedProfile === 'all') return;
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
             const data = await apiService.getAccountOverview(selectedProfile);
             setOverview(data);
@@ -67,7 +60,15 @@ export default function AnalyticsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedProfile]);
+
+    useEffect(() => {
+        if (selectedProfile && selectedProfile !== 'all') {
+            loadAnalytics();
+        } else {
+            setOverview(null);
+        }
+    }, [selectedProfile, loadAnalytics]);
 
     const formatNumber = (num: number): string => {
         if (num >= 1000000) {
@@ -197,7 +198,7 @@ export default function AnalyticsPage() {
 
                         <div className="glass-card p-6 hover:border-primary/30 transition-colors">
                             <div className="flex justify-between items-start mb-4">
-                                <Image className="w-8 h-8 text-green-400" />
+                                <ImageIcon className="w-8 h-8 text-green-400" />
                                 <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded">
                                     {overview.stats.postsChange}
                                 </span>
@@ -266,7 +267,7 @@ export default function AnalyticsPage() {
                                             />
                                         ) : (
                                             <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
-                                                <Image className="w-8 h-8 text-white/50" />
+                                                <ImageIcon className="w-8 h-8 text-white/50" />
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">

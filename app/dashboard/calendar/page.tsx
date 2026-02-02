@@ -11,6 +11,7 @@ import { es } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import ContentStrategyModal from '@/components/ContentStrategyModal';
 import ContentStrategyDetail from '@/components/ContentStrategyDetail';
+import { useCallback } from 'react';
 
 // Format badge colors
 const FORMAT_COLORS: Record<string, string> = {
@@ -43,17 +44,7 @@ export default function CalendarPage() {
     const [showStrategyDetail, setShowStrategyDetail] = useState(false);
     const [generatingStrategy, setGeneratingStrategy] = useState(false);
 
-    useEffect(() => {
-        loadPosts();
-    }, [selectedProfile]);
-
-    useEffect(() => {
-        if (businessProfiles.length > 0) {
-            loadContentStrategies();
-        }
-    }, [selectedProfile, currentDate, businessProfiles.length]);
-
-    const loadPosts = async () => {
+    const loadPosts = useCallback(async () => {
         try {
             const accountId = selectedProfile !== 'all' ? selectedProfile : undefined;
             const data = await apiService.getPosts(accountId);
@@ -63,13 +54,13 @@ export default function CalendarPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedProfile]);
 
-    const loadContentStrategies = async () => {
+    const loadContentStrategies = useCallback(async () => {
         setLoadingStrategies(true);
         try {
             const monthYear = format(currentDate, 'yyyy-MM');
-            
+
             if (selectedProfile === 'all') {
                 // Load strategies for all profiles
                 const allStrategies: any[] = [];
@@ -100,7 +91,17 @@ export default function CalendarPage() {
         } finally {
             setLoadingStrategies(false);
         }
-    };
+    }, [selectedProfile, currentDate, businessProfiles]);
+
+    useEffect(() => {
+        loadPosts();
+    }, [loadPosts]);
+
+    useEffect(() => {
+        if (businessProfiles.length > 0) {
+            loadContentStrategies();
+        }
+    }, [loadContentStrategies, businessProfiles.length]);
 
     const handleGenerateStrategy = async (data: {
         businessProfileId: string;
