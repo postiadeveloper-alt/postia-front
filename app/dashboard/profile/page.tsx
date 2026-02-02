@@ -60,6 +60,8 @@ export default function ProfilePage() {
             await apiService.disconnectInstagramAccount(accountId);
             alert('Cuenta desconectada exitosamente');
             loadInstagramAccounts();
+            // Broadcast disconnection event so Header dropdown refreshes
+            window.postMessage({ type: 'instagram-disconnected', accountId }, '*');
         } catch (error: any) {
             console.error('Failed to disconnect account:', error);
             alert('Falló la desconexión de la cuenta: ' + (error.response?.data?.message || error.message));

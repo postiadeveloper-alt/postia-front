@@ -20,7 +20,7 @@ export function Sidebar() {
     const pathname = usePathname();
 
     return (
-        <div className="w-64 h-screen glass-card border-r border-border flex flex-col p-4">
+        <div className="w-64 h-screen glass-card border-r border-border flex flex-col p-4 relative z-50">
             <div className="mb-8">
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-primary">
                     Postia
