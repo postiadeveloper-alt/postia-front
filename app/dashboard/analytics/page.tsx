@@ -37,6 +37,7 @@ interface AccountOverview {
         engagementRate: number;
     }>;
     insightsAvailable: boolean;
+    insightsError?: string;
 }
 
 export default function AnalyticsPage() {
@@ -252,7 +253,14 @@ export default function AnalyticsPage() {
                                 <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                 <p>No hay publicaciones disponibles para mostrar</p>
                                 {!overview.insightsAvailable && (
-                                    <p className="text-sm mt-2">Conecta tu cuenta de Instagram para ver más detalles</p>
+                                    <div className="mt-2">
+                                        <p className="text-sm">Conecta tu cuenta de Instagram para ver más detalles</p>
+                                        {overview.insightsError && (
+                                            <p className="text-xs text-red-400 mt-1 max-w-lg mx-auto bg-red-400/10 p-2 rounded">
+                                                {overview.insightsError}
+                                            </p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         ) : (
