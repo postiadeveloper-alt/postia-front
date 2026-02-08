@@ -1,25 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { X, Sparkles, Calendar, Check, Loader2, Film, Image, Layers, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { X, Sparkles, Calendar, Check, Loader2, Trash2, Plus, ArrowRight, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    format, 
-    startOfMonth, 
-    endOfMonth, 
-    eachDayOfInterval, 
+import {
+    format,
+    eachDayOfInterval,
     getDay,
-    isSameMonth,
-    isSameDay,
-    addMonths,
-    subMonths,
-    startOfWeek,
-    endOfWeek,
-    isToday,
     isBefore,
-    startOfDay
+    startOfDay,
+    parseISO,
+    isValid,
+    addDays,
+    isSameDay,
+    startOfMonth
 } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 interface FormatDistribution {
     reels: number;
@@ -39,10 +37,48 @@ interface ContentStrategyModalProps {
         selectedDates: string[];
         monthYear: string;
         formatDistribution: FormatDistribution;
+        goal: string;
     }) => Promise<void>;
 }
 
-const WEEKDAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+type ContentType = 'reels' | 'stories' | 'carousels' | 'staticPosts';
+
+const CONTENT_TYPES: { value: ContentType; label: string; icon: string }[] = [
+    { value: 'reels', label: 'Reel', icon: '🎬' },
+    { value: 'stories', label: 'Story', icon: '📱' },
+    { value: 'carousels', label: 'Carrusel', icon: '📸' },
+    { value: 'staticPosts', label: 'Post', icon: '🖼️' },
+];
+
+const STRATEGY_GOALS = [
+    'Reconocimiento de marca (Brand awareness)',
+    'Alcance a nuevas audiencias',
+    'Crecimiento de seguidores',
+    'Engagement (interacción)',
+    'Posicionamiento de marca',
+    'Educación / contenido informativo',
+    'Construcción de confianza y credibilidad',
+    'Tráfico al sitio web / landing',
+    'Generación de leads',
+    'Ventas / conversiones',
+    'Retención de clientes',
+    'Construcción de comunidad',
+    'Lanzamiento de productos o servicios',
+    'Investigación de mercado / feedback',
+    'Gestión de reputación',
+    'Testeo y optimización de contenido',
+    'Otro (Escribir mi propia meta)'
+];
+
+const WEEKDAYS = [
+    { id: 1, label: 'L', name: 'Lunes' },
+    { id: 2, label: 'M', name: 'Martes' },
+    { id: 3, label: 'M', name: 'Miércoles' },
+    { id: 4, label: 'J', name: 'Jueves' },
+    { id: 5, label: 'V', name: 'Viernes' },
+    { id: 6, label: 'S', name: 'Sábado' },
+    { id: 0, label: 'D', name: 'Domingo' },
+];
 
 export default function ContentStrategyModal({
     isOpen,
@@ -52,162 +88,155 @@ export default function ContentStrategyModal({
     currentMonth,
     onGenerate,
 }: ContentStrategyModalProps) {
-    const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+    // Basic Form State
     const [profileId, setProfileId] = useState(selectedProfileId !== 'all' ? selectedProfileId : '');
+    const [goal, setGoal] = useState<string>(STRATEGY_GOALS[0]);
+    const [customGoal, setCustomGoal] = useState<string>('');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
+    const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([1, 3, 5]); // Default Mon, Wed, Fri
+
+    // Per-day content plan
+    const [contentPlan, setContentPlan] = useState<Record<string, ContentType>>({});
+    const [excludedDates, setExcludedDates] = useState<string[]>([]);
+
+    // UI State
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [displayMonth, setDisplayMonth] = useState(currentMonth);
-    const [formatDistribution, setFormatDistribution] = useState<FormatDistribution>({
-        reels: 1,
-        stories: 0,
-        carousels: 0,
-        staticPosts: 0,
-    });
 
-    // Generate calendar days for the display month
-    const calendarDays = useMemo(() => {
-        const monthStart = startOfMonth(displayMonth);
-        const monthEnd = endOfMonth(displayMonth);
-        const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-        const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-        return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-    }, [displayMonth]);
-
-    const totalFormats = formatDistribution.reels + formatDistribution.stories + 
-                         formatDistribution.carousels + formatDistribution.staticPosts;
-    // Total publications is just the sum of all formats (distributed across dates)
-    const totalPublications = totalFormats;
-
-    const handleDateToggle = (date: Date) => {
-        // Don't allow selecting past dates
-        if (isBefore(date, startOfDay(new Date()))) return;
-        
-        setSelectedDates(prev => {
-            const isSelected = prev.some(d => isSameDay(d, date));
-            if (isSelected) {
-                return prev.filter(d => !isSameDay(d, date));
-            } else {
-                return [...prev, date].sort((a, b) => a.getTime() - b.getTime());
-            }
-        });
-    };
-
-    const handleSelectAllWeekday = (weekdayIndex: number) => {
-        const monthStart = startOfMonth(displayMonth);
-        const monthEnd = endOfMonth(displayMonth);
-        const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        const weekdayDates = allDays.filter(day => 
-            getDay(day) === weekdayIndex && !isBefore(day, startOfDay(new Date()))
-        );
-        
-        // Check if all weekday dates are already selected
-        const allSelected = weekdayDates.every(date => 
-            selectedDates.some(d => isSameDay(d, date))
-        );
-        
-        if (allSelected) {
-            // Deselect all
-            setSelectedDates(prev => 
-                prev.filter(d => !weekdayDates.some(wd => isSameDay(wd, d)))
-            );
-        } else {
-            // Select all
-            setSelectedDates(prev => {
-                const newDates = [...prev];
-                weekdayDates.forEach(date => {
-                    if (!newDates.some(d => isSameDay(d, date))) {
-                        newDates.push(date);
-                    }
-                });
-                return newDates.sort((a, b) => a.getTime() - b.getTime());
-            });
+    // Initialize/Reset
+    useEffect(() => {
+        if (isOpen) {
+            setProfileId(selectedProfileId !== 'all' ? selectedProfileId : '');
+            // Default range: Today to +7 days
+            const today = new Date();
+            const nextWeek = addDays(today, 7);
+            setStartDate(format(today, 'yyyy-MM-dd'));
+            setEndDate(format(nextWeek, 'yyyy-MM-dd'));
+            setExcludedDates([]);
+            setContentPlan({});
+            setGoal(STRATEGY_GOALS[0]);
+            setCustomGoal('');
+            setError(null);
         }
+    }, [isOpen, selectedProfileId]);
+
+    // Calculate valid dates based on Range + Recurrence
+    const generatedDates = useMemo(() => {
+        if (!startDate || !endDate) return [];
+
+        const start = parseISO(startDate);
+        const end = parseISO(endDate);
+
+        if (!isValid(start) || !isValid(end) || isBefore(end, start)) return [];
+
+        try {
+            const days = eachDayOfInterval({ start, end });
+            const today = startOfDay(new Date());
+
+            return days.filter(day => {
+                // Filter past dates (optional context: maybe they want to backfill? usually not for strategy generation)
+                // Filter by weekday recurrence
+                if (isBefore(day, today)) return false;
+                return selectedWeekdays.includes(getDay(day));
+            }).filter(day => {
+                // Filter excluded dates
+                return !excludedDates.includes(format(day, 'yyyy-MM-dd'));
+            });
+        } catch (e) {
+            return [];
+        }
+    }, [startDate, endDate, selectedWeekdays, excludedDates]);
+
+    // Derived: Final List of Items to Generate
+    // Maps generatedDates to their selected type (or default)
+    const itemsToGenerate = useMemo(() => {
+        return generatedDates.map(date => {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            return {
+                date: date,
+                dateStr: dateStr,
+                type: contentPlan[dateStr] || 'reels' // Default type
+            };
+        });
+    }, [generatedDates, contentPlan]);
+
+    // Toggle Weekday
+    const toggleWeekday = (dayId: number) => {
+        setSelectedWeekdays(prev =>
+            prev.includes(dayId)
+                ? prev.filter(d => d !== dayId)
+                : [...prev, dayId]
+        );
     };
 
-    const handleFormatChange = (formatKey: keyof FormatDistribution, delta: number) => {
-        setFormatDistribution(prev => ({
+    // Update Content Type for a Date
+    const handleTypeChange = (dateStr: string, type: ContentType) => {
+        setContentPlan(prev => ({
             ...prev,
-            [formatKey]: Math.max(0, prev[formatKey] + delta)
+            [dateStr]: type
         }));
+    };
+
+    // Remove a date from the list (add to excluded)
+    const handleRemoveDate = (dateStr: string) => {
+        setExcludedDates(prev => [...prev, dateStr]);
     };
 
     const handleGenerate = async () => {
         if (!profileId) {
-            setError('Por favor selecciona un perfil de negocio');
-            return;
-        }
-        if (selectedDates.length === 0) {
-            setError('Por favor selecciona al menos una fecha');
-            return;
-        }
-        if (totalFormats === 0) {
-            setError('Por favor selecciona al menos un formato de contenido');
+            setError('Selecciona un perfil de negocio');
             return;
         }
 
-        setError(null);
+        const finalGoal = goal === 'Otro (Escribir mi propia meta)' ? customGoal : goal;
+        if (!finalGoal.trim()) {
+            setError('Por favor define la meta de la estrategia');
+            return;
+        }
+
+        if (itemsToGenerate.length === 0) {
+            setError('No hay fechas seleccionadas para generar contenido');
+            return;
+        }
+
         setIsGenerating(true);
+        setError(null);
+
+        // Agreggate counts
+        const distribution: FormatDistribution = {
+            reels: 0,
+            stories: 0,
+            carousels: 0,
+            staticPosts: 0
+        };
+
+        const selectedDateStrings: string[] = [];
+
+        itemsToGenerate.forEach(item => {
+            selectedDateStrings.push(item.dateStr);
+            distribution[item.type]++;
+        });
+
+        const monthYear = startDate ? format(parseISO(startDate), 'yyyy-MM') : format(new Date(), 'yyyy-MM');
 
         try {
             await onGenerate({
                 businessProfileId: profileId,
-                selectedDates: selectedDates.map(d => format(d, 'yyyy-MM-dd')),
-                monthYear: format(displayMonth, 'yyyy-MM'),
-                formatDistribution,
+                selectedDates: selectedDateStrings,
+                monthYear: monthYear,
+                formatDistribution: distribution,
+                goal: finalGoal
             });
             onClose();
         } catch (err: any) {
-            setError(err.message || 'Error al generar la estrategia de contenido');
+            setError(err.message || 'Error al generar la estrategia');
         } finally {
             setIsGenerating(false);
         }
     };
 
-    const handleClearSelection = () => {
-        setSelectedDates([]);
-    };
-
     const selectedProfile = businessProfiles.find(p => p.instagramAccount?.id === profileId);
-
-    // Format controls component
-    const FormatControl = ({ 
-        label, 
-        icon: Icon, 
-        value, 
-        formatKey,
-        colorClass 
-    }: { 
-        label: string; 
-        icon: any; 
-        value: number; 
-        formatKey: keyof FormatDistribution;
-        colorClass: string;
-    }) => (
-        <div className="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-lg">
-            <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${colorClass}`}>
-                    <Icon className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-sm text-gray-300">{label}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-                <button
-                    onClick={() => handleFormatChange(formatKey, -1)}
-                    disabled={value === 0}
-                    className="w-6 h-6 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded text-white text-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                    -
-                </button>
-                <span className="w-5 text-center font-medium text-white text-sm">{value}</span>
-                <button
-                    onClick={() => handleFormatChange(formatKey, 1)}
-                    className="w-6 h-6 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded text-white text-sm transition-colors"
-                >
-                    +
-                </button>
-            </div>
-        </div>
-    );
 
     if (!isOpen) return null;
 
@@ -217,260 +246,240 @@ export default function ContentStrategyModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl my-4 max-h-[90vh] flex flex-col"
+                    className="bg-[#0F1117] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
                 >
-                    {/* Header - Fixed */}
-                    <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-5 border-b border-white/5 bg-[#14161F]">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-br from-primary to-purple-600 rounded-xl">
+                            <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20">
                                 <Sparkles className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-white">Estrategia de Contenido IA</h2>
-                                <p className="text-xs text-gray-400">
-                                    Selecciona fechas para generar contenido
-                                </p>
+                                <h2 className="text-lg font-bold text-white tracking-tight">Estrategia de Contenido</h2>
+                                <p className="text-xs text-gray-400 font-medium">Planifica tu calendario con IA</p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-400 hover:text-white"
                         >
-                            <X className="w-5 h-5 text-gray-400" />
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
 
-                    {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {/* Business Profile Selection */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+                        {/* 1. Profile Selection */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white">1</div>
                                 Perfil de Negocio
                             </label>
+
                             <select
                                 value={profileId}
                                 onChange={(e) => setProfileId(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all [&>option]:bg-gray-800 [&>option]:text-white"
+                                className="w-full bg-[#1A1D26] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none appearance-none"
                             >
-                                <option value="" className="bg-gray-800 text-white">Elige un perfil...</option>
-                                {businessProfiles.map((profile) => (
-                                    <option key={profile.id} value={profile.instagramAccount?.id} className="bg-gray-800 text-white">
-                                        {profile.brandName} (@{profile.instagramAccount?.username})
+                                <option value="" className="bg-gray-900">Seleccionar perfil...</option>
+                                {businessProfiles.map((p) => (
+                                    <option key={p.id} value={p.instagramAccount?.id} className="bg-gray-900">
+                                        {p.brandName} (@{p.instagramAccount?.username})
                                     </option>
                                 ))}
                             </select>
                         </div>
 
-                        {/* Selected Profile Preview - Compact */}
-                        {selectedProfile && (
-                            <div className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center gap-3">
-                                {selectedProfile.instagramAccount?.profilePictureUrl && (
-                                    <img
-                                        src={selectedProfile.instagramAccount.profilePictureUrl}
-                                        alt={selectedProfile.brandName}
-                                        className="w-8 h-8 rounded-full"
+                        {/* 1.5 Strategy Goal */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white">*</div>
+                                Meta de la Estrategia
+                            </label>
+
+                            <select
+                                value={goal}
+                                onChange={(e) => setGoal(e.target.value)}
+                                className="w-full bg-[#1A1D26] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none appearance-none"
+                            >
+                                {STRATEGY_GOALS.map((g) => (
+                                    <option key={g} value={g} className="bg-gray-900">
+                                        {g}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {goal === 'Otro (Escribir mi propia meta)' && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="pt-1"
+                                >
+                                    <Input
+                                        placeholder="Escribe tu meta aquí..."
+                                        value={customGoal}
+                                        onChange={(e) => setCustomGoal(e.target.value)}
+                                        className="bg-[#1A1D26] border-white/10"
                                     />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-white text-sm">{selectedProfile.brandName}</div>
-                                    <div className="text-xs text-gray-400 truncate">{selectedProfile.industry}</div>
+                                </motion.div>
+                            )}
+                        </div>
+
+                        {/* 2. Date Range */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white">2</div>
+                                Rango de Fechas
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 space-y-1">
+                                    <span className="text-[10px] text-gray-400 ml-1">Desde</span>
+                                    <Input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="bg-[#1A1D26] border-white/10 h-11"
+                                    />
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-gray-600 mt-5" />
+                                <div className="flex-1 space-y-1">
+                                    <span className="text-[10px] text-gray-400 ml-1">Hasta</span>
+                                    <Input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="bg-[#1A1D26] border-white/10 h-11"
+                                    />
                                 </div>
                             </div>
-                        )}
+                        </div>
 
-                        {/* Calendar Section */}
-                        <div>
-                            <div className="flex items-center justify-between mb-3">
-                                <label className="block text-sm font-medium text-gray-300">
-                                    Seleccionar Fechas
-                                </label>
-                                {selectedDates.length > 0 && (
-                                    <button
-                                        onClick={handleClearSelection}
-                                        className="text-xs text-gray-400 hover:text-white transition-colors"
-                                    >
-                                        Limpiar selección
-                                    </button>
-                                )}
-                            </div>
-                            
-                            {/* Month Navigation */}
-                            <div className="flex items-center justify-between mb-3">
-                                <button
-                                    onClick={() => setDisplayMonth(prev => subMonths(prev, 1))}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                                >
-                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
-                                </button>
-                                <span className="text-sm font-medium text-white capitalize">
-                                    {format(displayMonth, 'MMMM yyyy', { locale: es })}
-                                </span>
-                                <button
-                                    onClick={() => setDisplayMonth(prev => addMonths(prev, 1))}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                                >
-                                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                                </button>
-                            </div>
-
-                            {/* Weekday Headers - Clickable to select all */}
-                            <div className="grid grid-cols-7 gap-1 mb-1">
-                                {WEEKDAY_LABELS.map((label, index) => (
-                                    <button
-                                        key={label}
-                                        onClick={() => handleSelectAllWeekday(index)}
-                                        className="text-xs font-medium text-gray-500 hover:text-primary py-1 text-center transition-colors"
-                                        title={`Seleccionar todos los ${label}`}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Calendar Grid */}
-                            <div className="grid grid-cols-7 gap-1">
-                                {calendarDays.map((day, index) => {
-                                    const isCurrentMonth = isSameMonth(day, displayMonth);
-                                    const isSelected = selectedDates.some(d => isSameDay(d, day));
-                                    const isPast = isBefore(day, startOfDay(new Date()));
-                                    const isDayToday = isToday(day);
-
+                        {/* 3. Recurrence */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white">3</div>
+                                Días de Publicación
+                            </label>
+                            <div className="flex justify-between gap-1 p-1 bg-[#1A1D26] rounded-xl border border-white/5">
+                                {WEEKDAYS.map((day) => {
+                                    const isSelected = selectedWeekdays.includes(day.id);
                                     return (
                                         <button
-                                            key={index}
-                                            onClick={() => handleDateToggle(day)}
-                                            disabled={isPast || !isCurrentMonth}
+                                            key={day.id}
+                                            onClick={() => toggleWeekday(day.id)}
                                             className={`
-                                                aspect-square rounded-lg text-xs font-medium transition-all relative
-                                                ${!isCurrentMonth 
-                                                    ? 'text-gray-700 cursor-default' 
-                                                    : isPast 
-                                                        ? 'text-gray-600 cursor-not-allowed'
-                                                        : isSelected 
-                                                            ? 'bg-primary text-white' 
-                                                            : 'text-gray-300 hover:bg-white/10'
+                                                flex-1 aspect-square rounded-lg text-sm font-medium transition-all
+                                                flex items-center justify-center
+                                                ${isSelected
+                                                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                                                    : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
                                                 }
-                                                ${isDayToday && isCurrentMonth ? 'ring-1 ring-primary/50' : ''}
                                             `}
+                                            title={day.name}
                                         >
-                                            {format(day, 'd')}
-                                            {isSelected && (
-                                                <Check className="w-2.5 h-2.5 absolute bottom-0.5 right-0.5" />
-                                            )}
+                                            {day.label}
                                         </button>
                                     );
                                 })}
                             </div>
-
-                            <p className="text-xs text-gray-500 mt-2">
-                                {selectedDates.length} {selectedDates.length === 1 ? 'fecha seleccionada' : 'fechas seleccionadas'}
-                                {selectedDates.length > 0 && (
-                                    <span className="text-gray-600"> • Click en día de semana para seleccionar todos</span>
-                                )}
-                            </p>
                         </div>
 
-                        {/* Format Distribution - Compact 2x2 Grid */}
-                        {selectedDates.length > 0 && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Distribución de Formatos
+                        {/* 4. Live Preview */}
+                        <div className="space-y-3 pt-2 border-t border-white/5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white">4</div>
+                                    Planificación ({itemsToGenerate.length})
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
-                                    Los formatos se distribuirán entre las {selectedDates.length} fechas seleccionadas
-                                </p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <FormatControl 
-                                        label="Reels" 
-                                        icon={Film} 
-                                        value={formatDistribution.reels} 
-                                        formatKey="reels"
-                                        colorClass="bg-pink-500/20"
-                                    />
-                                    <FormatControl 
-                                        label="Stories" 
-                                        icon={Clock} 
-                                        value={formatDistribution.stories} 
-                                        formatKey="stories"
-                                        colorClass="bg-orange-500/20"
-                                    />
-                                    <FormatControl 
-                                        label="Carruseles" 
-                                        icon={Layers} 
-                                        value={formatDistribution.carousels} 
-                                        formatKey="carousels"
-                                        colorClass="bg-blue-500/20"
-                                    />
-                                    <FormatControl 
-                                        label="Posts" 
-                                        icon={Image} 
-                                        value={formatDistribution.staticPosts} 
-                                        formatKey="staticPosts"
-                                        colorClass="bg-green-500/20"
-                                    />
-                                </div>
                             </div>
-                        )}
 
-                        {/* Estimation - Compact */}
-                        <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-lg p-3">
-                            <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-primary" />
-                                <span className="text-sm text-gray-300">Total:</span>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-base font-bold text-primary">
-                                    {totalPublications} publicaciones
-                                </span>
-                                {totalFormats > 0 && selectedDates.length > 0 && (
-                                    <p className="text-xs text-gray-500">
-                                        Distribuidas en {selectedDates.length} fechas
-                                    </p>
-                                )}
-                            </div>
+                            {itemsToGenerate.length === 0 ? (
+                                <div className="text-center py-6 border border-dashed border-white/10 rounded-xl bg-white/5">
+                                    <Calendar className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">Selecciona un rango y días para ver tu plan</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {itemsToGenerate.map((item) => (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            key={item.dateStr}
+                                            className="flex items-center gap-3 p-3 bg-[#1A1D26] border border-white/5 rounded-xl group hover:border-white/10 transition-colors"
+                                        >
+                                            <div className="text-center min-w-[3rem]">
+                                                <div className="text-[10px] text-gray-500 uppercase">{format(item.date, 'EEE', { locale: es })}</div>
+                                                <div className="text-lg font-bold text-white leading-none">{format(item.date, 'd')}</div>
+                                            </div>
+
+                                            <div className="h-8 w-px bg-white/10" />
+
+                                            <div className="flex-1">
+                                                <select
+                                                    value={item.type}
+                                                    onChange={(e) => handleTypeChange(item.dateStr, e.target.value as ContentType)}
+                                                    className="w-full bg-black/20 text-white text-sm border-none rounded-lg py-1.5 px-2 focus:ring-1 focus:ring-indigo-500 cursor-pointer hover:bg-black/30 transition-colors"
+                                                >
+                                                    {CONTENT_TYPES.map(type => (
+                                                        <option key={type.value} value={type.value} className="bg-gray-900">
+                                                            {type.icon} {type.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleRemoveDate(item.dateStr)}
+                                                className="p-2 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                title="Eliminar fecha"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Error Message */}
                         {error && (
-                            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
                                 {error}
                             </div>
                         )}
                     </div>
 
-                    {/* Footer - Fixed */}
-                    <div className="flex gap-3 p-4 border-t border-white/10 shrink-0">
-                        <button
+                    {/* Footer */}
+                    <div className="p-5 border-t border-white/5 bg-[#14161F] flex gap-3">
+                        <Button
+                            variant="ghost"
                             onClick={onClose}
-                            disabled={isGenerating}
-                            className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+                            className="flex-1 text-gray-400 hover:text-white"
                         >
                             Cancelar
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleGenerate}
-                            disabled={isGenerating || !profileId || selectedDates.length === 0 || totalFormats === 0}
-                            className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 text-white rounded-lg font-medium text-sm transition-all shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            disabled={isGenerating || itemsToGenerate.length === 0 || !profileId}
+                            className="flex-[2] bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25 border-none"
                         >
                             {isGenerating ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                     Generando...
                                 </>
                             ) : (
                                 <>
-                                    <Sparkles className="w-4 h-4" />
-                                    Generar Estrategia
+                                    <Sparkles className="w-4 h-4 mr-2" />
+                                    Generar {itemsToGenerate.length} Posts
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </motion.div>
             </motion.div>

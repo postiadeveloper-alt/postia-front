@@ -113,6 +113,7 @@ export default function CalendarPage() {
             carousels: number;
             staticPosts: number;
         };
+        goal: string;
     }) => {
         setGeneratingStrategy(true);
         try {
@@ -125,6 +126,7 @@ export default function CalendarPage() {
                 selectedDates: data.selectedDates,
                 monthYear: data.monthYear,
                 formatDistribution: data.formatDistribution,
+                goal: data.goal,
             });
 
             // Set the selected profile to show the generated strategies

@@ -286,6 +286,26 @@ class ApiService {
         return response.data;
     }
 
+    async generateImageWithFormat(
+        templatePath: string,
+        contentPath: string,
+        formatSettings: {
+            format: 'story' | 'reel' | 'post' | 'carousel';
+            width: number;
+            height: number;
+            cropX: number;
+            cropY: number;
+            scale: number;
+        }
+    ) {
+        const response = await this.api.post('/image-processing/generate-with-format', {
+            templatePath,
+            contentPath,
+            ...formatSettings
+        });
+        return response.data;
+    }
+
     async listTemplates() {
         const response = await this.api.get('/image-processing/templates');
         return response.data;
@@ -331,6 +351,7 @@ class ApiService {
             carousels: number;
             staticPosts: number;
         };
+        goal?: string;
     }) {
         const response = await this.api.post('/content-strategy/generate', data);
         return response.data;
@@ -375,6 +396,14 @@ class ApiService {
 
     async convertContentStrategyToPost(id: string) {
         const response = await this.api.post(`/content-strategy/${id}/convert-to-post`);
+        return response.data;
+    }
+
+    async generateCaption(businessProfileId: string, imageUrl?: string) {
+        const response = await this.api.post('/content-strategy/generate-caption', {
+            businessProfileId,
+            imageUrl
+        });
         return response.data;
     }
 }

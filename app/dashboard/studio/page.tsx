@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Upload, Image as ImageIcon, Zap, Check, Sparkles, Download, ExternalLink, Loader2, X, Send } from 'lucide-react';
+import { Upload, Image as ImageIcon, Zap, Check, Sparkles, Download, ExternalLink, Loader2, X, Send, Settings2 } from 'lucide-react';
 import apiService from '@/lib/api.service';
+import FormatEditorModal, { FormatSettings } from '@/components/FormatEditorModal';
 
 interface ImageAsset {
     id: string;
@@ -31,6 +32,7 @@ export default function StudioPage() {
     const [selectedOutput, setSelectedOutput] = useState<ImageAsset | null>(null);
     const [viewingAsset, setViewingAsset] = useState<ImageAsset | null>(null);
     const [accountId, setAccountId] = useState<string | null>(null);
+    const [showFormatEditor, setShowFormatEditor] = useState(false);
 
     const handleCreatePost = (imageUrl: string) => {
         // Store the pre-uploaded image URL in sessionStorage for the create post page
@@ -100,12 +102,29 @@ export default function StudioPage() {
         setIsAIGenerating(false);
     };
 
-    const handleGenerate = async () => {
+    const handleGenerateClick = () => {
+        if (!selectedTemplate || !selectedContent) return;
+        setShowFormatEditor(true);
+    };
+
+    const handleGenerateWithFormat = async (settings: FormatSettings) => {
         if (!selectedTemplate || !selectedContent) return;
 
+        setShowFormatEditor(false);
         setIsGenerating(true);
         try {
-            const result = await apiService.generateImage(selectedTemplate.gcsPath, selectedContent.gcsPath);
+            const result = await apiService.generateImageWithFormat(
+                selectedTemplate.gcsPath,
+                selectedContent.gcsPath,
+                {
+                    format: settings.format,
+                    width: settings.width,
+                    height: settings.height,
+                    cropX: settings.cropX,
+                    cropY: settings.cropY,
+                    scale: settings.scale
+                }
+            );
             // Refresh outputs list to include the new generation
             const updatedOutputs = await apiService.listOutputs();
             setOutputs(Array.isArray(updatedOutputs) ? updatedOutputs : []);
@@ -115,6 +134,7 @@ export default function StudioPage() {
             setViewingAsset(result);
         } catch (error) {
             console.error('Generation failed:', error);
+            alert('Error al generar el diseño. Por favor intenta de nuevo.');
         }
         setIsGenerating(false);
     };
@@ -187,7 +207,7 @@ export default function StudioPage() {
                                     </button>
                                     <label className="cursor-pointer bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                                         <Upload className="w-4 h-4 inline-block mr-2" />
-                                        Subir Nuevo
+                                        Subir Template
                                         <input
                                             type="file"
                                             className="hidden"
@@ -243,7 +263,7 @@ export default function StudioPage() {
                                 </h2>
                                 <label className="cursor-pointer bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                                     <Upload className="w-4 h-4 inline-block mr-2" />
-                                    Subir Nuevo
+                                    Subir imagen
                                     <input
                                         type="file"
                                         className="hidden"
@@ -293,7 +313,7 @@ export default function StudioPage() {
                     {/* Action & Result */}
                     <div className="flex flex-col items-center justify-center space-y-6">
                         <button
-                            onClick={handleGenerate}
+                            onClick={handleGenerateClick}
                             disabled={!selectedTemplate || !selectedContent || isGenerating}
                             className={`
                                 px-8 py-4 rounded-xl text-lg font-bold shadow-lg transition-all flex items-center gap-3
@@ -505,6 +525,17 @@ export default function StudioPage() {
                         </div>
                     </motion.div>
                 </motion.div>
+            )}
+
+            {/* Format Editor Modal */}
+            {selectedTemplate && selectedContent && (
+                <FormatEditorModal
+                    isOpen={showFormatEditor}
+                    onClose={() => setShowFormatEditor(false)}
+                    onConfirm={handleGenerateWithFormat}
+                    templateUrl={selectedTemplate.publicUrl}
+                    contentUrl={selectedContent.publicUrl}
+                />
             )}
         </div>
     );
