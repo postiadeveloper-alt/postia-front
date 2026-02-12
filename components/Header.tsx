@@ -2,9 +2,10 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
-import { LogOut, Bell, ChevronDown, Building2, X } from 'lucide-react';
+import { LogOut, Bell, ChevronDown, Building2, X, Plus } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
     const { user, logout } = useAuth();
@@ -12,6 +13,7 @@ export function Header() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [removingId, setRemovingId] = useState<string | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -137,6 +139,22 @@ export function Header() {
                                             </button>
                                         </div>
                                     ))}
+
+                                    {/* Add Profile button */}
+                                    <div className="mt-2 pt-2 border-t border-white/10">
+                                        <button
+                                            onClick={() => {
+                                                router.push('/dashboard/profile');
+                                                setShowDropdown(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-gray-300 transition-all"
+                                        >
+                                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                                <Plus className="w-4 h-4 text-primary" />
+                                            </div>
+                                            <span className="text-sm font-medium">Añadir Perfil</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
