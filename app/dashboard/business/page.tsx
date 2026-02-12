@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import apiService from '@/lib/api.service';
-import { Building2, Save, Loader2, Plus, X } from 'lucide-react';
+import { Building2, Save, Loader2, Plus, X, Instagram, Link2, Unlink } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface BusinessProfileForm {
@@ -42,18 +42,48 @@ const initialFormState: BusinessProfileForm = {
 import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
 
 export default function BusinessPage() {
-    const { selectedBusinessProfile, selectedProfile, loading: profileContextLoading } = useBusinessProfile();
-    const [loading, setLoading] = useState(true); // Internal loading state for form data
+    const { selectedBusinessProfile, selectedProfile, loading: profileContextLoading, refreshProfiles } = useBusinessProfile();
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [formData, setFormData] = useState<BusinessProfileForm>(initialFormState);
-    const [newItem, setNewItem] = useState(''); // Temp state for adding array items
+    const [newItem, setNewItem] = useState('');
     const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+    // Instagram linking
+    const [isConnectingIG, setIsConnectingIG] = useState(false);
+    const [linkedAccount, setLinkedAccount] = useState<any>(null);
 
     useEffect(() => {
         loadData();
     }, [selectedProfile]);
+
+    useEffect(() => {
+        // Populate linked account info from the selected business profile
+        if (selectedBusinessProfile?.instagramAccount) {
+            setLinkedAccount(selectedBusinessProfile.instagramAccount);
+        } else {
+            setLinkedAccount(null);
+        }
+    }, [selectedBusinessProfile]);
+
+    // Listen for Instagram connection events
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'instagram-connected' && event.data.success) {
+                // Account connected - refresh to link it
+                setIsConnectingIG(false);
+                refreshProfiles();
+            } else if (event.data?.type === 'instagram-error') {
+                setIsConnectingIG(false);
+                alert('Falló la conexión con Instagram: ' + event.data.error);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [refreshProfiles]);
 
     const loadData = async () => {
         try {
@@ -179,6 +209,39 @@ export default function BusinessPage() {
             alert('Error al guardar el perfil.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleConnectInstagram = async () => {
+        setIsConnectingIG(true);
+        try {
+            const authUrl = await apiService.getInstagramAuthUrl();
+            const width = 600;
+            const height = 700;
+            const left = window.screenX + (window.innerWidth - width) / 2;
+            const top = window.screenY + (window.innerHeight - height) / 2;
+
+            window.open(
+                authUrl,
+                'Conectar Instagram',
+                `width=${width},height=${height},left=${left},top=${top}`
+            );
+        } catch (error: any) {
+            console.error('Failed to get auth URL:', error);
+            setIsConnectingIG(false);
+            alert('Falló el inicio de la conexión con Instagram: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
+    const handleRefreshInstagram = async () => {
+        if (!linkedAccount?.id) return;
+        try {
+            await apiService.refreshInstagramAccount(linkedAccount.id);
+            await refreshProfiles();
+            alert('¡Cuenta actualizada exitosamente!');
+        } catch (error: any) {
+            console.error('Failed to refresh account:', error);
+            alert('Error al actualizar: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -311,7 +374,86 @@ export default function BusinessPage() {
                     <Building2 className="w-8 h-8 text-primary" />
                     Perfil de Negocio
                 </h1>
-                <p className="text-gray-400 mt-1">Gestiona la identidad y preferencias de tu marca</p>
+                <p className="text-gray-400 mt-1">Gestiona la identidad, redes sociales y preferencias de tu marca</p>
+            </div>
+
+            {/* Social Media Accounts Section */}
+            <div className="glass-card p-6 space-y-4">
+                <h3 className="text-xl font-semibold border-b border-white/10 pb-4 flex items-center gap-2">
+                    <Link2 className="w-5 h-5 text-primary" />
+                    Redes Sociales Conectadas
+                </h3>
+                <p className="text-sm text-gray-400">
+                    Vincula cuentas de redes sociales a este perfil de negocio. Actualmente se soporta Instagram, con más plataformas próximamente.
+                </p>
+
+                {/* Instagram */}
+                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 flex items-center justify-center">
+                                <Instagram className="w-6 h-6 text-white" />
+                            </div>
+                            {linkedAccount ? (
+                                <div>
+                                    <p className="font-semibold text-white">@{linkedAccount.username}</p>
+                                    <p className="text-sm text-gray-400">
+                                        {linkedAccount.followersCount?.toLocaleString() || '0'} seguidores
+                                    </p>
+                                    <span className="text-xs text-green-400">✓ Conectado</span>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p className="font-semibold text-white">Instagram</p>
+                                    <p className="text-sm text-gray-400">No conectado</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            {linkedAccount ? (
+                                <button
+                                    type="button"
+                                    onClick={handleRefreshInstagram}
+                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Actualizar
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleConnectInstagram}
+                                    disabled={isConnectingIG}
+                                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                                >
+                                    {isConnectingIG ? (
+                                        <span className="flex items-center gap-2">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Conectando...
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-2">
+                                            <Instagram className="w-4 h-4" />
+                                            Conectar
+                                        </span>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Coming Soon: Other platforms */}
+                <div className="p-4 bg-white/5 rounded-xl border border-white/5 opacity-50">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gray-700 flex items-center justify-center text-gray-400">
+                            <Plus className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-400">Más plataformas próximamente</p>
+                            <p className="text-sm text-gray-500">LinkedIn, Twitter/X y más</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BusinessProfileProvider } from '@/contexts/BusinessProfileContext';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import OnboardingModal from '@/components/OnboardingModal';
+import NoProfileBanner from '@/components/NoProfileBanner';
 import apiService from '@/lib/api.service';
 
 export default function DashboardLayout({
@@ -16,7 +16,7 @@ export default function DashboardLayout({
 }) {
     const router = useRouter();
     const { isAuthenticated, loading } = useAuth();
-    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [hasNoProfiles, setHasNoProfiles] = useState(false);
     const [checkingProfiles, setCheckingProfiles] = useState(true);
 
     useEffect(() => {
@@ -27,14 +27,16 @@ export default function DashboardLayout({
         }
     }, [isAuthenticated, loading, router]);
 
-    // Check for business profiles to trigger onboarding
+    // Check for business profiles
     useEffect(() => {
-        const checkOnboarding = async () => {
+        const checkProfiles = async () => {
             if (isAuthenticated && !loading) {
                 try {
                     const profiles = await apiService.getBusinessProfiles();
                     if (!profiles || profiles.length === 0) {
-                        setShowOnboarding(true);
+                        setHasNoProfiles(true);
+                    } else {
+                        setHasNoProfiles(false);
                     }
                 } catch (error) {
                     console.error('Failed to check business profiles:', error);
@@ -44,12 +46,11 @@ export default function DashboardLayout({
             }
         };
 
-        checkOnboarding();
+        checkProfiles();
     }, [isAuthenticated, loading]);
 
-    const handleOnboardingComplete = () => {
-        setShowOnboarding(false);
-        // Refresh the page or trigger a re-fetch if needed
+    const handleProfileCreated = () => {
+        // Refresh the page to reload profiles
         window.location.reload();
     };
 
@@ -75,14 +76,15 @@ export default function DashboardLayout({
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header />
                     <main className="flex-1 overflow-y-auto p-6">
-                        {children}
+                        {hasNoProfiles ? (
+                            <div className="flex items-center justify-center min-h-full">
+                                <NoProfileBanner onProfileCreated={handleProfileCreated} />
+                            </div>
+                        ) : (
+                            children
+                        )}
                     </main>
                 </div>
-
-                <OnboardingModal
-                    isOpen={showOnboarding}
-                    onComplete={handleOnboardingComplete}
-                />
             </div>
         </BusinessProfileProvider>
     );

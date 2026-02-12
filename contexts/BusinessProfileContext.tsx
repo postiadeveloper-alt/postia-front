@@ -26,6 +26,7 @@ interface BusinessProfileContextType {
     loading: boolean;
     setSelectedProfile: (profileId: string) => void;
     refreshProfiles: () => Promise<void>;
+    removeProfile: (businessProfileId: string) => Promise<void>;
 }
 
 const BusinessProfileContext = createContext<BusinessProfileContextType | undefined>(undefined);
@@ -64,6 +65,16 @@ export function BusinessProfileProvider({ children }: { children: ReactNode }) {
         await loadBusinessProfiles();
     };
 
+    const removeProfile = async (businessProfileId: string) => {
+        await apiService.deleteBusinessProfile(businessProfileId);
+        // If the removed profile was selected, reset to 'all'
+        const removedProfile = businessProfiles.find(p => p.id === businessProfileId);
+        if (removedProfile && selectedProfile === removedProfile.instagramAccount.id) {
+            setSelectedProfile('all');
+        }
+        await loadBusinessProfiles();
+    };
+
     // Get the full business profile object for the selected profile
     const selectedBusinessProfile = selectedProfile === 'all' 
         ? null 
@@ -77,7 +88,8 @@ export function BusinessProfileProvider({ children }: { children: ReactNode }) {
                 selectedBusinessProfile,
                 loading, 
                 setSelectedProfile,
-                refreshProfiles 
+                refreshProfiles,
+                removeProfile
             }}
         >
             {children}
