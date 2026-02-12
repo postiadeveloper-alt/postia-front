@@ -132,7 +132,7 @@ export default function NoProfileBanner({ onProfileCreated }: NoProfileBannerPro
                 instagramAccountId: connectedAccount.id,
                 brandName: formData.brandName,
                 industry: formData.industry,
-                description: formData.brandDescription,
+                brandDescription: formData.brandDescription,
                 targetAudience: formData.targetAudience,
                 brandValues: formData.brandValues,
                 visualStyle: formData.visualStyle,
