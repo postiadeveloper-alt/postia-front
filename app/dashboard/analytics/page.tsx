@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import apiService from '@/lib/api.service';
 import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
-import { TrendingUp, BarChart3, Sparkles, Users, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
+import { TrendingUp, BarChart3, Sparkles, Users, Image as ImageIcon, AlertCircle, RefreshCw, Film, Images } from 'lucide-react';
 import { useCallback } from 'react';
 
 interface AccountOverview {
@@ -31,11 +31,47 @@ interface AccountOverview {
         caption: string;
         mediaType: string;
         mediaUrl: string;
+        thumbnailUrl: string;
         timestamp: string;
         likeCount: number;
         commentsCount: number;
         engagementRate: number;
     }>;
+    topPostsByFormat: {
+        IMAGE: Array<{
+            id: string;
+            caption: string;
+            mediaType: string;
+            mediaUrl: string;
+            thumbnailUrl: string;
+            timestamp: string;
+            likeCount: number;
+            commentsCount: number;
+            engagementRate: number;
+        }>;
+        VIDEO: Array<{
+            id: string;
+            caption: string;
+            mediaType: string;
+            mediaUrl: string;
+            thumbnailUrl: string;
+            timestamp: string;
+            likeCount: number;
+            commentsCount: number;
+            engagementRate: number;
+        }>;
+        CAROUSEL_ALBUM: Array<{
+            id: string;
+            caption: string;
+            mediaType: string;
+            mediaUrl: string;
+            thumbnailUrl: string;
+            timestamp: string;
+            likeCount: number;
+            commentsCount: number;
+            engagementRate: number;
+        }>;
+    };
     insightsAvailable: boolean;
     insightsError?: string;
 }
@@ -245,56 +281,71 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
 
-                    {/* Top Posts */}
-                    <div className="glass-card p-6">
-                        <h3 className="text-xl font-semibold mb-4">Publicaciones con Mejor Rendimiento</h3>
-                        {overview.topPosts.length === 0 ? (
-                            <div className="text-center py-8 text-gray-400">
-                                <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                <p>No hay publicaciones disponibles para mostrar</p>
-                                {!overview.insightsAvailable && (
-                                    <div className="mt-2">
-                                        <p className="text-sm">Conecta tu cuenta de Instagram para ver más detalles</p>
-                                        {overview.insightsError && (
-                                            <p className="text-xs text-red-400 mt-1 max-w-lg mx-auto bg-red-400/10 p-2 rounded">
-                                                {overview.insightsError}
-                                            </p>
-                                        )}
+                    {/* Top Posts by Format - Past 3 Months */}
+                    {[
+                        { key: 'IMAGE' as const, label: 'Mejores Posts', icon: ImageIcon, color: 'text-blue-400' },
+                        { key: 'VIDEO' as const, label: 'Mejores Reels', icon: Film, color: 'text-pink-400' },
+                        { key: 'CAROUSEL_ALBUM' as const, label: 'Mejores Carruseles', icon: Images, color: 'text-green-400' },
+                    ].map(({ key, label, icon: Icon, color }) => {
+                        const posts = overview.topPostsByFormat?.[key] || [];
+                        return (
+                            <div key={key} className="glass-card p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Icon className={`w-6 h-6 ${color}`} />
+                                    <h3 className="text-xl font-semibold">{label}</h3>
+                                    <span className="text-sm text-gray-400 ml-auto">Últimos 3 meses</span>
+                                </div>
+                                {posts.length === 0 ? (
+                                    <div className="text-center py-6 text-gray-400">
+                                        <Icon className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                        <p className="text-sm">No hay {label.toLowerCase()} en los últimos 3 meses</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {posts.map((post) => (
+                                            <div key={post.id} className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                                {post.mediaUrl ? (
+                                                    <img
+                                                        src={post.mediaUrl}
+                                                        alt="Post"
+                                                        className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            if (post.thumbnailUrl && target.src !== post.thumbnailUrl) {
+                                                                target.src = post.thumbnailUrl;
+                                                            } else {
+                                                                target.style.display = 'none';
+                                                                target.parentElement?.classList.add('bg-gradient-to-br', 'from-primary', 'to-purple-600', 'flex', 'items-center', 'justify-center');
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <Icon className="w-8 h-8 text-white/50" />
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate text-sm">
+                                                        {post.caption || 'Sin descripción'}
+                                                    </p>
+                                                    <p className="text-sm text-gray-400">
+                                                        {formatNumber(post.likeCount)} me gusta · {formatNumber(post.commentsCount)} comentarios
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {new Date(post.timestamp).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="text-primary font-semibold">{post.engagementRate.toFixed(2)}%</p>
+                                                    <p className="text-xs text-gray-400">Interacción</p>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {overview.topPosts.map((post) => (
-                                    <div key={post.id} className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-                                        {post.mediaUrl ? (
-                                            <img
-                                                src={post.mediaUrl}
-                                                alt="Post"
-                                                className="w-16 h-16 object-cover rounded-lg"
-                                            />
-                                        ) : (
-                                            <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
-                                                <ImageIcon className="w-8 h-8 text-white/50" />
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">
-                                                {post.caption || 'Sin descripción'}
-                                            </p>
-                                            <p className="text-sm text-gray-400">
-                                                {formatNumber(post.likeCount)} me gusta · {formatNumber(post.commentsCount)} comentarios
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-primary font-semibold">{post.engagementRate.toFixed(2)}%</p>
-                                            <p className="text-xs text-gray-400">Interacción</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                        );
+                    })}
 
                     {!overview.insightsAvailable && (
                         <div className="glass-card p-4 border-yellow-500/30 bg-yellow-500/5">
