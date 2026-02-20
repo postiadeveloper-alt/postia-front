@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import { Calendar, TrendingUp, BarChart3, User, PlusCircle, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
 
-const navItems = [
-    { icon: Calendar, label: 'Calendario', href: '/dashboard/calendar' },
+const allNavItems = [
+    { icon: Calendar, label: 'Calendario', href: '/dashboard/calendar', requiresProfile: true },
     { icon: BarChart3, label: 'Analíticas', href: '/dashboard/analytics' },
     { icon: TrendingUp, label: 'Tendencias', href: '/dashboard/trending' },
     { icon: Building2, label: 'Negocio', href: '/dashboard/business' },
@@ -18,6 +19,9 @@ const navItems = [
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { businessProfiles, loading: loadingProfiles } = useBusinessProfile();
+    const hasProfiles = !loadingProfiles && businessProfiles.length > 0;
+    const navItems = allNavItems.filter(item => !item.requiresProfile || hasProfiles);
 
     return (
         <div className="w-64 h-screen glass-card border-r border-border flex flex-col p-4 relative z-50">

@@ -256,9 +256,10 @@ class ApiService {
     }
 
     // Image Processing endpoints
-    async uploadTemplate(file: File) {
+    async uploadTemplate(file: File, businessProfileId?: string) {
         const formData = new FormData();
         formData.append('file', file);
+        if (businessProfileId) formData.append('businessProfileId', businessProfileId);
         const response = await this.api.post('/image-processing/upload/template', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -267,9 +268,10 @@ class ApiService {
         return response.data;
     }
 
-    async uploadContent(file: File) {
+    async uploadContent(file: File, businessProfileId?: string) {
         const formData = new FormData();
         formData.append('file', file);
+        if (businessProfileId) formData.append('businessProfileId', businessProfileId);
         const response = await this.api.post('/image-processing/upload/content', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -296,35 +298,44 @@ class ApiService {
             cropX: number;
             cropY: number;
             scale: number;
-        }
+        },
+        businessProfileId?: string,
     ) {
         const response = await this.api.post('/image-processing/generate-with-format', {
             templatePath,
             contentPath,
-            ...formatSettings
+            ...formatSettings,
+            businessProfileId,
         });
         return response.data;
     }
 
-    async listTemplates() {
-        const response = await this.api.get('/image-processing/templates');
+    async listTemplates(businessProfileId?: string) {
+        const params: any = {};
+        if (businessProfileId) params.businessProfileId = businessProfileId;
+        const response = await this.api.get('/image-processing/templates', { params });
         return response.data;
     }
 
-    async listContent() {
-        const response = await this.api.get('/image-processing/content');
+    async listContent(businessProfileId?: string) {
+        const params: any = {};
+        if (businessProfileId) params.businessProfileId = businessProfileId;
+        const response = await this.api.get('/image-processing/content', { params });
         return response.data;
     }
 
-    async listOutputs() {
-        const response = await this.api.get('/image-processing/outputs');
+    async listOutputs(businessProfileId?: string) {
+        const params: any = {};
+        if (businessProfileId) params.businessProfileId = businessProfileId;
+        const response = await this.api.get('/image-processing/outputs', { params });
         return response.data;
     }
 
-    async uploadLogo(file: File, instagramAccountId: string) {
+    async uploadLogo(file: File, instagramAccountId: string, businessProfileId?: string) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('instagramAccountId', instagramAccountId);
+        if (businessProfileId) formData.append('businessProfileId', businessProfileId);
         const response = await this.api.post('/image-processing/upload/logo', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -333,9 +344,10 @@ class ApiService {
         return response.data;
     }
 
-    async generateAITemplates(instagramAccountId: string) {
+    async generateAITemplates(instagramAccountId: string, businessProfileId?: string) {
         const response = await this.api.post('/image-processing/generate-ai-templates', {
-            instagramAccountId
+            instagramAccountId,
+            businessProfileId,
         });
         return response.data;
     }
@@ -353,7 +365,9 @@ class ApiService {
         };
         goal?: string;
     }) {
-        const response = await this.api.post('/content-strategy/generate', data);
+        // Exclude 'goal' — not accepted by the backend DTO
+        const { goal, ...payload } = data;
+        const response = await this.api.post('/content-strategy/generate', payload);
         return response.data;
     }
 

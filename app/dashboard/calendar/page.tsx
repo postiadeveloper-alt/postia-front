@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import apiService from '@/lib/api.service';
 import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
 import { getImageUrl } from '@/lib/utils';
-import { Calendar, Clock, Plus, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Plus, Sparkles, AlertTriangle, Trash2, X, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -37,6 +37,7 @@ export default function CalendarPage() {
     const { businessProfiles, selectedProfile, setSelectedProfile, loading: loadingProfiles } = useBusinessProfile();
     const [loading, setLoading] = useState(true);
     const [loadingStrategies, setLoadingStrategies] = useState(false);
+    const [galleryOutputs, setGalleryOutputs] = useState<any[]>([]);
 
     // Modal states
     const [showStrategyModal, setShowStrategyModal] = useState(false);
@@ -44,10 +45,20 @@ export default function CalendarPage() {
     const [showStrategyDetail, setShowStrategyDetail] = useState(false);
     const [generatingStrategy, setGeneratingStrategy] = useState(false);
 
+    // Delete state
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    // Expanded day state
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+
     const loadPosts = useCallback(async () => {
+        if (selectedProfile === 'all') {
+            setPosts([]);
+            setLoading(false);
+            return;
+        }
         try {
-            const accountId = selectedProfile !== 'all' ? selectedProfile : undefined;
-            const data = await apiService.getPosts(accountId);
+            const data = await apiService.getPosts(selectedProfile);
             setPosts(data || []);
         } catch (error) {
             console.error('Failed to load posts:', error);
@@ -56,34 +67,34 @@ export default function CalendarPage() {
         }
     }, [selectedProfile]);
 
+    const loadGalleryOutputs = useCallback(async () => {
+        try {
+            const profile = selectedProfile !== 'all'
+                ? businessProfiles.find(p => p.instagramAccount?.id === selectedProfile)
+                : null;
+            const outputs = await apiService.listOutputs(profile?.id || undefined);
+            setGalleryOutputs(Array.isArray(outputs) ? outputs : []);
+        } catch (error) {
+            console.error('Failed to load gallery outputs:', error);
+            setGalleryOutputs([]);
+        }
+    }, [selectedProfile, businessProfiles]);
+
     const loadContentStrategies = useCallback(async () => {
         setLoadingStrategies(true);
+        if (selectedProfile === 'all') {
+            setContentStrategies([]);
+            setLoadingStrategies(false);
+            return;
+        }
         try {
             const monthYear = format(currentDate, 'yyyy-MM');
-
-            if (selectedProfile === 'all') {
-                // Load strategies for all profiles
-                const allStrategies: any[] = [];
-                for (const profile of businessProfiles) {
-                    try {
-                        const data = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
-                        if (data && data.length > 0) {
-                            allStrategies.push(...data);
-                        }
-                    } catch (error) {
-                        console.error(`Failed to load strategies for profile ${profile.id}:`, error);
-                    }
-                }
-                setContentStrategies(allStrategies);
+            const profile = businessProfiles.find(p => p.instagramAccount?.id === selectedProfile);
+            if (profile) {
+                const data = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
+                setContentStrategies(data || []);
             } else {
-                // Load strategies for selected profile
-                const profile = businessProfiles.find(p => p.instagramAccount?.id === selectedProfile);
-                if (profile) {
-                    const data = await apiService.getContentStrategiesByMonth(monthYear, profile.id);
-                    setContentStrategies(data || []);
-                } else {
-                    setContentStrategies([]);
-                }
+                setContentStrategies([]);
             }
         } catch (error) {
             console.error('Failed to load content strategies:', error);
@@ -100,8 +111,9 @@ export default function CalendarPage() {
     useEffect(() => {
         if (businessProfiles.length > 0) {
             loadContentStrategies();
+            loadGalleryOutputs();
         }
-    }, [loadContentStrategies, businessProfiles.length]);
+    }, [loadContentStrategies, loadGalleryOutputs, businessProfiles.length]);
 
     const handleGenerateStrategy = async (data: {
         businessProfileId: string;
@@ -151,6 +163,35 @@ export default function CalendarPage() {
         setShowStrategyDetail(true);
     };
 
+    const handleDeletePost = async (e: React.MouseEvent, postId: string) => {
+        e.stopPropagation();
+        if (!window.confirm('¿Eliminar esta publicación programada?')) return;
+        setDeletingId(postId);
+        try {
+            await apiService.deletePost(postId);
+            setPosts(prev => prev.filter(p => p.id !== postId));
+        } catch (error) {
+            console.error('Failed to delete post:', error);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleDeleteStrategy = async (e: React.MouseEvent, strategyId: string) => {
+        e.stopPropagation();
+        if (!window.confirm('¿Eliminar este contenido de la estrategia IA?')) return;
+        setDeletingId(strategyId);
+        try {
+            await apiService.deleteContentStrategy(strategyId);
+            setContentStrategies(prev => prev.filter(s => s.id !== strategyId));
+            // Clear selectedDay panel if it becomes empty after deletion
+        } catch (error) {
+            console.error('Failed to delete strategy:', error);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -195,7 +236,16 @@ export default function CalendarPage() {
             </div>
 
             {/* Calendar Header */}
-            <div className="glass-card p-6">
+            <div className="glass-card p-6 relative">
+                {selectedProfile === 'all' && (
+                    <div className="absolute inset-0 z-10 rounded-xl flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-sm">
+                        <AlertTriangle className="w-10 h-10 text-yellow-400" />
+                        <p className="text-base font-semibold text-yellow-300 text-center px-8">
+                            Para usar el calendario debes seleccionar un perfil de negocio.<br />
+                            <span className="text-sm font-normal text-gray-300">Elige uno desde el selector en la parte superior.</span>
+                        </p>
+                    </div>
+                )}
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-semibold">
                         {format(currentDate, 'MMMM yyyy', { locale: es })}
@@ -242,10 +292,14 @@ export default function CalendarPage() {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: index * 0.01 }}
-                                className={`min-h-24 p-2 rounded-lg border transition-all cursor-pointer hover:border-primary/50 ${today
-                                    ? 'border-primary bg-primary/10'
-                                    : 'border-white/10 bg-white/5 hover:bg-white/10'
-                                    }`}
+                                onClick={() => setSelectedDay(prev => prev && isSameDay(prev, day) ? null : day)}
+                                className={`min-h-24 p-2 rounded-lg border transition-all cursor-pointer hover:border-primary/50 ${
+                                    selectedDay && isSameDay(selectedDay, day)
+                                        ? 'border-primary bg-primary/20 ring-1 ring-primary/40'
+                                        : today
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                }`}
                             >
                                 <div className="text-sm font-semibold mb-1">
                                     {format(day, 'd')}
@@ -261,14 +315,21 @@ export default function CalendarPage() {
                                                     e.stopPropagation();
                                                     handleStrategyClick(strategy);
                                                 }}
-                                                className="text-xs bg-purple-500/20 border border-purple-500/30 rounded px-2 py-1 truncate cursor-pointer hover:bg-purple-500/30 transition-colors"
+                                                className="group text-xs bg-gray-500/20 border border-gray-500/30 text-gray-400 rounded px-2 py-1 cursor-pointer hover:bg-gray-500/30 transition-colors"
                                                 title={`${formatIcon} ${strategy.hook}`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     <span className="text-sm flex-shrink-0">{formatIcon}</span>
-                                                    <span className="truncate">
+                                                    <span className="truncate flex-1">
                                                         {strategy.hook?.substring(0, 12) || 'Contenido IA'}
                                                     </span>
+                                                    <button
+                                                        onClick={(e) => handleDeleteStrategy(e, strategy.id)}
+                                                        disabled={deletingId === strategy.id}
+                                                        className="hidden group-hover:flex items-center justify-center w-3 h-3 flex-shrink-0 text-red-400 hover:text-red-300 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-2.5 h-2.5" />
+                                                    </button>
                                                 </div>
                                             </div>
                                         );
@@ -276,10 +337,14 @@ export default function CalendarPage() {
                                     {/* Regular Posts */}
                                     {dayPosts.slice(0, Math.max(0, 2 - dayStrategies.length)).map((post: any) => {
                                         const profile = businessProfiles.find(p => p.instagramAccount.id === post.instagramAccountId);
+                                        const isScheduled = post.status === 'scheduled';
+                                        const pillClass = isScheduled
+                                            ? 'bg-green-500/20 border-green-500/40 text-green-200'
+                                            : 'bg-gray-500/20 border-gray-500/30 text-gray-400';
                                         return (
                                             <div
                                                 key={post.id}
-                                                className="text-xs bg-primary/20 border border-primary/30 rounded px-2 py-1 truncate"
+                                                className={`group text-xs border rounded px-2 py-1 ${pillClass}`}
                                                 title={`${profile?.brandName || 'Desconocido'}: ${post.content || post.title || 'Sin descripción'}`}
                                             >
                                                 <div className="flex items-center gap-1">
@@ -290,9 +355,16 @@ export default function CalendarPage() {
                                                             className="w-3 h-3 rounded-full flex-shrink-0"
                                                         />
                                                     )}
-                                                    <span className="truncate">
+                                                    <span className="truncate flex-1">
                                                         {(post.content || post.title)?.substring(0, 15) || 'Sin descripción'}
                                                     </span>
+                                                    <button
+                                                        onClick={(e) => handleDeletePost(e, post.id)}
+                                                        disabled={deletingId === post.id}
+                                                        className="hidden group-hover:flex items-center justify-center w-3 h-3 flex-shrink-0 text-red-400 hover:text-red-300 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-2.5 h-2.5" />
+                                                    </button>
                                                 </div>
                                             </div>
                                         );
@@ -307,9 +379,107 @@ export default function CalendarPage() {
                         );
                     })}
                 </div>
+                {/* Day expanded panel */}
+                {selectedDay && (() => {
+                    const dayPosts = getPostsForDay(selectedDay);
+                    const dayStrategies = getStrategiesForDay(selectedDay);
+                    const hasItems = dayPosts.length > 0 || dayStrategies.length > 0;
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden"
+                        >
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                                <span className="font-semibold text-sm">
+                                    {format(selectedDay, "EEEE d 'de' MMMM", { locale: es })}
+                                </span>
+                                <button onClick={() => setSelectedDay(null)} className="text-gray-400 hover:text-white transition-colors">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            {!hasItems ? (
+                                <p className="text-sm text-gray-500 px-4 py-4">No hay contenido programado para este día.</p>
+                            ) : (
+                                <div className="divide-y divide-white/5">
+                                    {dayStrategies.map((strategy: any) => {
+                                        const formatIcon = FORMAT_ICONS[strategy.format as keyof typeof FORMAT_ICONS] || '📝';
+                                        return (
+                                            <div key={strategy.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors">
+                                                <button
+                                                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                                                    onClick={() => handleStrategyClick(strategy)}
+                                                >
+                                                    <span className="text-lg flex-shrink-0">{formatIcon}</span>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium truncate text-purple-300">{strategy.hook || 'Contenido IA'}</p>
+                                                        <p className="text-xs text-gray-500 capitalize">{strategy.format?.replace('_', ' ')} · Estrategia IA</p>
+                                                    </div>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0 ml-2" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDeleteStrategy(e, strategy.id)}
+                                                    disabled={deletingId === strategy.id}
+                                                    className="ml-3 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors disabled:opacity-50 flex-shrink-0"
+                                                    title="Eliminar"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {dayPosts.map((post: any) => {
+                                        const profile = businessProfiles.find(p => p.instagramAccount.id === post.instagramAccountId);
+                                        const isScheduled = post.status === 'scheduled';
+                                        const statusDot = isScheduled
+                                            ? 'bg-green-400'
+                                            : 'bg-gray-500';
+                                        const statusLabel = isScheduled ? 'Programado' : 'Borrador';
+                                        return (
+                                            <div key={post.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors">
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {post.mediaUrls?.[0] ? (
+                                                        <img src={getImageUrl(post.mediaUrls[0])} alt="" className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
+                                                    ) : (
+                                                        <div className="w-10 h-10 bg-white/10 rounded-lg flex-shrink-0" />
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                                            <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot}`} />
+                                                            <span className={`text-xs font-medium ${isScheduled ? 'text-green-400' : 'text-gray-500'}`}>{statusLabel}</span>
+                                                        </div>
+                                                        <p className="text-sm font-medium truncate">{(post.content || post.title)?.substring(0, 50) || 'Sin descripción'}</p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {profile?.brandName} · {post.scheduledAt ? format(new Date(post.scheduledAt), 'HH:mm') : 'Borrador'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                                    <Link
+                                                        href={`/dashboard/posts/${post.id}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-xs text-primary hover:text-primary-hover transition-colors"
+                                                    >
+                                                        Ver
+                                                    </Link>
+                                                    <button
+                                                        onClick={(e) => handleDeletePost(e, post.id)}
+                                                        disabled={deletingId === post.id}
+                                                        className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors disabled:opacity-50"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </motion.div>
+                    );
+                })()}
             </div>
-
-            {/* Upcoming Posts */}
             <div className="glass-card p-6">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -355,8 +525,11 @@ export default function CalendarPage() {
                         <div className="space-y-3">
                             {upcomingPosts.map((post: any) => {
                                 const profile = businessProfiles.find(p => p.instagramAccount.id === post.instagramAccountId);
+                                const isScheduled = post.status === 'scheduled';
                                 return (
-                                    <div key={post.id} className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                    <div key={post.id} className={`flex items-center justify-between p-4 rounded-lg transition-colors hover:bg-white/10 ${
+                                        isScheduled ? 'bg-green-500/5 border border-green-500/20' : 'bg-white/5 border border-white/5'
+                                    }`}>
                                         <div className="flex items-center gap-4">
                                             {post.mediaUrls?.[0] && (
                                                 <img
@@ -367,6 +540,14 @@ export default function CalendarPage() {
                                             )}
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                        isScheduled
+                                                            ? 'bg-green-500/15 border-green-500/30 text-green-400'
+                                                            : 'bg-gray-500/15 border-gray-500/30 text-gray-400'
+                                                    }`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isScheduled ? 'bg-green-400' : 'bg-gray-500'}`} />
+                                                        {isScheduled ? 'Programado' : 'Borrador'}
+                                                    </span>
                                                     {profile && (
                                                         <>
                                                             {profile.instagramAccount.profilePictureUrl && (
@@ -388,12 +569,22 @@ export default function CalendarPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <Link
-                                            href={`/dashboard/posts/${post.id}`}
-                                            className="text-primary hover:text-primary-hover transition-colors"
-                                        >
-                                            Ver
-                                        </Link>
+                                        <div className="flex items-center gap-3">
+                                            <Link
+                                                href={`/dashboard/posts/${post.id}`}
+                                                className="text-primary hover:text-primary-hover transition-colors text-sm"
+                                            >
+                                                Ver
+                                            </Link>
+                                            <button
+                                                onClick={(e) => handleDeletePost(e, post.id)}
+                                                disabled={deletingId === post.id}
+                                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors disabled:opacity-50"
+                                                title="Eliminar publicación"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -420,6 +611,17 @@ export default function CalendarPage() {
                     setShowStrategyDetail(false);
                     setSelectedStrategy(null);
                 }}
+                onDelete={async (id) => {
+                    await apiService.deleteContentStrategy(id);
+                    setContentStrategies(prev => prev.filter(s => s.id !== id));
+                    setShowStrategyDetail(false);
+                    setSelectedStrategy(null);
+                }}
+                onConvertToPost={async (id) => {
+                    await apiService.convertContentStrategyToPost(id);
+                    await loadContentStrategies();
+                }}
+                galleryOutputs={galleryOutputs}
             />
         </div>
     );

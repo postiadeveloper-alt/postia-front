@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Check, Move, ZoomIn, ZoomOut, RotateCcw, Smartphone, Square, RectangleVertical, Film, Layers } from 'lucide-react';
+import { X, Check, Move, ZoomIn, ZoomOut, RotateCcw, Smartphone, Square, RectangleVertical, Film, Layers, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FormatEditorModalProps {
     isOpen: boolean;
@@ -121,6 +121,59 @@ export default function FormatEditorModal({
         setPosition({ x: 0, y: 0 });
         setScale(1);
     };
+
+    const EXTEND_SCALE_STEP = 0.05;
+
+    // Extend the image in a given direction:
+    // Increases the scale and offsets position so the image grows outward from the arrow's edge,
+    // revealing more content on that side of the frame.
+    const handleExtend = (direction: 'up' | 'down' | 'left' | 'right') => {
+        setScale(prev => {
+            const newScale = Math.min(prev + EXTEND_SCALE_STEP, 3);
+            const growth = newScale / prev;
+
+            // Shift position so the growth appears anchored to the opposite edge
+            setPosition(pos => {
+                const dx = (imageDisplaySize.width * prev * (growth - 1));
+                const dy = (imageDisplaySize.height * prev * (growth - 1));
+                switch (direction) {
+                    case 'up':    return { ...pos, y: pos.y - dy * 0.15 };
+                    case 'down':  return { ...pos, y: pos.y + dy * 0.15 };
+                    case 'left':  return { ...pos, x: pos.x - dx * 0.15 };
+                    case 'right': return { ...pos, x: pos.x + dx * 0.15 };
+                }
+            });
+
+            return newScale;
+        });
+    };
+
+    // Display image at its natural aspect ratio, sized to fill the outer preview area
+    // so the user sees the full unmodified image and drags to choose which part is in the frame
+    const outerWidth = containerSize.width + 100;
+    const outerHeight = containerSize.height + 100;
+
+    const getImageNaturalDisplaySize = useCallback(() => {
+        if (contentImageDimensions.width === 0 || contentImageDimensions.height === 0) {
+            return { width: outerWidth, height: outerHeight };
+        }
+        const imgAspect = contentImageDimensions.width / contentImageDimensions.height;
+
+        // Fit the full image inside the outer container, preserving aspect ratio
+        let width, height;
+        if (imgAspect > outerWidth / outerHeight) {
+            // Image is wider → fit to outer width
+            width = outerWidth;
+            height = outerWidth / imgAspect;
+        } else {
+            // Image is taller → fit to outer height
+            height = outerHeight;
+            width = outerHeight * imgAspect;
+        }
+        return { width, height };
+    }, [contentImageDimensions, outerWidth, outerHeight]);
+
+    const imageDisplaySize = getImageNaturalDisplaySize();
 
     const handleConfirm = () => {
         const format = FORMAT_DIMENSIONS[selectedFormat];
@@ -265,41 +318,86 @@ export default function FormatEditorModal({
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-white">Vista Previa</h3>
 
-                        {/* Info about cropping */}
+                        {/* Info about dragging */}
                         <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
                             <p className="text-xs text-blue-300 text-center">
-                                ✂️ La plantilla se recortará automáticamente para ajustarse al formato seleccionado
+                                🖼️ Arrastra para reposicionar · Usa las flechas para extender la imagen en esa dirección
                             </p>
                         </div>
 
                         <div className="flex justify-center">
+                            {/* Outer container - clips at boundary but shows overflow around frame */}
                             <div
                                 ref={containerRef}
-                                className="relative bg-gray-900 rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl cursor-move"
+                                className="relative overflow-hidden rounded-2xl bg-black/40 cursor-move select-none"
                                 style={{
-                                    width: containerSize.width,
-                                    height: containerSize.height
+                                    width: containerSize.width + 100,
+                                    height: containerSize.height + 100,
                                 }}
                                 onMouseDown={handleMouseDown}
                             >
-                                {/* Content Image (Background - Draggable) */}
+                                {/* Content Image - Natural proportions, user drags to position */}
                                 <div
-                                    className="absolute inset-0"
+                                    className="absolute pointer-events-none"
                                     style={{
-                                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                                        transformOrigin: 'center center'
+                                        left: 50 + containerSize.width / 2,
+                                        top: 50 + containerSize.height / 2,
+                                        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+                                        transformOrigin: 'center center',
                                     }}
                                 >
                                     <img
                                         src={contentUrl}
                                         alt="Content"
-                                        className="w-full h-full object-cover pointer-events-none"
+                                        className="pointer-events-none"
+                                        style={{
+                                            width: imageDisplaySize.width,
+                                            height: imageDisplaySize.height,
+                                        }}
                                         draggable={false}
                                     />
                                 </div>
 
-                                {/* Template Image (Overlay - Fixed, cropped to fit) */}
-                                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                {/* Dark overlay with cutout for the frame area */}
+                                <div
+                                    className="absolute pointer-events-none"
+                                    style={{
+                                        left: 50,
+                                        top: 50,
+                                        width: containerSize.width,
+                                        height: containerSize.height,
+                                        boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.55)',
+                                        borderRadius: '0.75rem',
+                                        zIndex: 10,
+                                    }}
+                                />
+
+                                {/* Frame border */}
+                                <div
+                                    className="absolute pointer-events-none"
+                                    style={{
+                                        left: 50,
+                                        top: 50,
+                                        width: containerSize.width,
+                                        height: containerSize.height,
+                                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                                        borderRadius: '0.75rem',
+                                        zIndex: 12,
+                                    }}
+                                />
+
+                                {/* Template Image (Overlay - Fixed, inside frame only) */}
+                                <div
+                                    className="absolute pointer-events-none overflow-hidden"
+                                    style={{
+                                        left: 50,
+                                        top: 50,
+                                        width: containerSize.width,
+                                        height: containerSize.height,
+                                        borderRadius: '0.75rem',
+                                        zIndex: 11,
+                                    }}
+                                >
                                     <img
                                         src={templateUrl}
                                         alt="Template"
@@ -310,8 +408,89 @@ export default function FormatEditorModal({
 
                                 {/* Drag indicator */}
                                 {isDragging && (
-                                    <div className="absolute inset-0 bg-primary/10 border-2 border-primary/50 pointer-events-none" />
+                                    <div
+                                        className="absolute pointer-events-none"
+                                        style={{
+                                            left: 50,
+                                            top: 50,
+                                            width: containerSize.width,
+                                            height: containerSize.height,
+                                            backgroundColor: 'rgba(var(--primary-rgb), 0.1)',
+                                            border: '2px solid rgba(var(--primary-rgb), 0.5)',
+                                            borderRadius: '0.75rem',
+                                            zIndex: 13,
+                                        }}
+                                    />
                                 )}
+
+                                {/* Extend arrows — scale image outward from each edge */}
+                                {/* Top arrow */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleExtend('up'); }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    className="absolute flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 group"
+                                    style={{
+                                        left: 50 + containerSize.width / 2 - 16,
+                                        top: 50 - 36,
+                                        width: 32,
+                                        height: 28,
+                                        zIndex: 20,
+                                    }}
+                                    title="Extender imagen hacia arriba"
+                                >
+                                    <ChevronUp className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+                                </button>
+
+                                {/* Bottom arrow */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleExtend('down'); }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    className="absolute flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 group"
+                                    style={{
+                                        left: 50 + containerSize.width / 2 - 16,
+                                        top: 50 + containerSize.height + 8,
+                                        width: 32,
+                                        height: 28,
+                                        zIndex: 20,
+                                    }}
+                                    title="Extender imagen hacia abajo"
+                                >
+                                    <ChevronDown className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+                                </button>
+
+                                {/* Left arrow */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleExtend('left'); }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    className="absolute flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 group"
+                                    style={{
+                                        left: 50 - 36,
+                                        top: 50 + containerSize.height / 2 - 14,
+                                        width: 28,
+                                        height: 32,
+                                        zIndex: 20,
+                                    }}
+                                    title="Extender imagen hacia la izquierda"
+                                >
+                                    <ChevronLeft className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+                                </button>
+
+                                {/* Right arrow */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleExtend('right'); }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    className="absolute flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 group"
+                                    style={{
+                                        left: 50 + containerSize.width + 8,
+                                        top: 50 + containerSize.height / 2 - 14,
+                                        width: 28,
+                                        height: 32,
+                                        zIndex: 20,
+                                    }}
+                                    title="Extender imagen hacia la derecha"
+                                >
+                                    <ChevronRight className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+                                </button>
                             </div>
                         </div>
 

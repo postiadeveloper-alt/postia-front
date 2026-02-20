@@ -78,9 +78,8 @@ export function Header() {
                             <div className="absolute top-full left-0 mt-2 w-80 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-[70] overflow-hidden">
                                 <div className="p-2">
                                     {/* All Profiles option */}
-                                    {businessProfiles.length > 1 && (
-                                        <>
-                                            <button
+                                    <>
+                                        <button
                                                 onClick={() => {
                                                     setSelectedProfile('all');
                                                     setShowDropdown(false);
@@ -95,7 +94,6 @@ export function Header() {
                                             </button>
                                             <div className="my-2 border-t border-white/10"></div>
                                         </>
-                                    )}
 
                                     {/* Business Profile items */}
                                     {businessProfiles.map((profile) => (

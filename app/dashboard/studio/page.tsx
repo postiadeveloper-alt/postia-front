@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Upload, Image as ImageIcon, Zap, Check, Sparkles, Download, ExternalLink, Loader2, X, Send, Settings2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, Zap, Check, Sparkles, Download, ExternalLink, Loader2, X, Send, Settings2, Smartphone, Square, Film, Layers } from 'lucide-react';
 import apiService from '@/lib/api.service';
 import FormatEditorModal, { FormatSettings } from '@/components/FormatEditorModal';
+import { useBusinessProfile } from '@/contexts/BusinessProfileContext';
 
 interface ImageAsset {
     id: string;
@@ -19,6 +20,8 @@ interface ImageAsset {
 
 export default function StudioPage() {
     const router = useRouter();
+    const { selectedBusinessProfile, businessProfiles, selectedProfile } = useBusinessProfile();
+    const businessProfileId = selectedBusinessProfile?.id || undefined;
     const [activeTab, setActiveTab] = useState<'create' | 'gallery'>('create');
     const [templates, setTemplates] = useState<ImageAsset[]>([]);
     const [contents, setContents] = useState<ImageAsset[]>([]);
@@ -43,9 +46,9 @@ export default function StudioPage() {
     const loadLibrary = useCallback(async () => {
         try {
             const [t, c, o] = await Promise.all([
-                apiService.listTemplates(),
-                apiService.listContent(),
-                apiService.listOutputs()
+                apiService.listTemplates(businessProfileId),
+                apiService.listContent(businessProfileId),
+                apiService.listOutputs(businessProfileId)
             ]);
             setTemplates(Array.isArray(t) ? t : []);
             setContents(Array.isArray(c) ? c : []);
@@ -53,32 +56,46 @@ export default function StudioPage() {
         } catch (error) {
             console.error('Failed to load library:', error);
         }
-    }, []);
+    }, [businessProfileId]);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
             const accounts = await apiService.getInstagramAccounts();
             if (accounts && accounts.length > 0) {
-                setAccountId(accounts[0].id);
+                // Use the account corresponding to selected business profile, or first
+                if (selectedBusinessProfile) {
+                    const matchingAccount = accounts.find((a: any) => a.id === selectedBusinessProfile.instagramAccount?.id);
+                    setAccountId(matchingAccount?.id || accounts[0].id);
+                } else {
+                    setAccountId(accounts[0].id);
+                }
             }
             await loadLibrary();
         } catch (error) {
             console.error('Failed to load data:', error);
         }
         setIsLoading(false);
-    }, [loadLibrary]);
+    }, [loadLibrary, selectedBusinessProfile]);
 
     useEffect(() => {
         loadData();
     }, [loadData]);
 
+    // Reset selections when business profile changes
+    useEffect(() => {
+        setSelectedTemplate(null);
+        setSelectedContent(null);
+        setSelectedOutput(null);
+        setGeneratedImage(null);
+    }, [businessProfileId]);
+
     const handleUpload = async (type: 'template' | 'content', file: File) => {
         try {
             if (type === 'template') {
-                await apiService.uploadTemplate(file);
+                await apiService.uploadTemplate(file, businessProfileId);
             } else {
-                await apiService.uploadContent(file);
+                await apiService.uploadContent(file, businessProfileId);
             }
             loadLibrary();
         } catch (error) {
@@ -90,9 +107,9 @@ export default function StudioPage() {
         if (!accountId) return;
         setIsAIGenerating(true);
         try {
-            await apiService.generateAITemplates(accountId);
+            await apiService.generateAITemplates(accountId, businessProfileId);
             await loadLibrary();
-            await apiService.generateAITemplates(accountId);
+            await apiService.generateAITemplates(accountId, businessProfileId);
             await loadLibrary();
             alert('¡Plantillas de IA generadas exitosamente!');
         } catch (error) {
@@ -123,10 +140,11 @@ export default function StudioPage() {
                     cropX: settings.cropX,
                     cropY: settings.cropY,
                     scale: settings.scale
-                }
+                },
+                businessProfileId,
             );
             // Refresh outputs list to include the new generation
-            const updatedOutputs = await apiService.listOutputs();
+            const updatedOutputs = await apiService.listOutputs(businessProfileId);
             setOutputs(Array.isArray(updatedOutputs) ? updatedOutputs : []);
 
             // Redirect to gallery and show preview
@@ -155,7 +173,23 @@ export default function StudioPage() {
             <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-8 rounded-2xl text-white">
                 <h1 className="text-3xl font-bold mb-2">Estudio Creativo</h1>
                 <p className="text-indigo-200">Combina tus plantillas con contenido para crear visuales impresionantes.</p>
+                {selectedBusinessProfile && (
+                    <div className="mt-3 inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg text-sm">
+                        <span className="text-indigo-300">Perfil activo:</span>
+                        <span className="font-semibold">{selectedBusinessProfile.brandName}</span>
+                    </div>
+                )}
             </div>
+
+            {/* No profile selected warning */}
+            {!selectedBusinessProfile && businessProfiles.length > 1 && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-center gap-3">
+                    <span className="text-yellow-400 text-xl">⚠️</span>
+                    <p className="text-yellow-200 text-sm">
+                        Selecciona un perfil de negocio en el menú lateral para ver su contenido exclusivo. Actualmente estás viendo contenido sin perfil asignado.
+                    </p>
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="flex gap-2">
@@ -188,6 +222,19 @@ export default function StudioPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-8"
                 >
+                    {!selectedBusinessProfile ? (
+                        <div className="glass-card p-8 rounded-xl text-center space-y-4">
+                            <div className="w-16 h-16 mx-auto rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+                                <Zap className="w-8 h-8 text-yellow-500" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-200">Seleccioná un Perfil de Negocio</h3>
+                            <p className="text-gray-400 text-sm max-w-md mx-auto">
+                                Para usar plantillas, subir contenido y generar diseños necesitás tener un perfil de negocio seleccionado.
+                                Elegí uno desde el selector en la barra superior.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Templates Section */}
                         <div className="glass-card p-6 rounded-xl space-y-4">
@@ -336,6 +383,8 @@ export default function StudioPage() {
                             )}
                         </button>
                     </div>
+                        </>
+                    )}
                 </motion.div>
             )}
 
@@ -358,32 +407,113 @@ export default function StudioPage() {
                                 Empezar a Crear
                             </button>
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {outputs.map((output) => (
-                                <motion.div
-                                    key={output.id}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    onClick={() => setSelectedOutput(output)}
-                                    onDoubleClick={() => setViewingAsset(output)}
-                                    className="relative aspect-[9/16] rounded-xl overflow-hidden cursor-pointer border-2 border-white/10 hover:border-primary/50 transition-all shadow-lg group"
-                                >
-                                    <img
-                                        src={output.publicUrl}
-                                        alt={output.originalName}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                                            <p className="text-xs text-gray-300">{formatDate(output.createdAt)}</p>
+                    ) : (() => {
+                        const FORMAT_SECTIONS = [
+                            { key: 'story', label: 'Stories', icon: Smartphone, ratio: '9:16', aspect: 'aspect-[9/16]' },
+                            { key: 'reel', label: 'Reels', icon: Film, ratio: '9:16', aspect: 'aspect-[9/16]' },
+                            { key: 'post', label: 'Posts', icon: Square, ratio: '1:1', aspect: 'aspect-square' },
+                            { key: 'carousel', label: 'Carruseles', icon: Layers, ratio: '4:5', aspect: 'aspect-[4/5]' },
+                        ];
+
+                        const getOutputFormat = (output: ImageAsset): string => {
+                            const match = output.originalName.match(/^generated_(story|reel|post|carousel)_/);
+                            return match ? match[1] : 'other';
+                        };
+
+                        const grouped = outputs.reduce<Record<string, ImageAsset[]>>((acc, output) => {
+                            const fmt = getOutputFormat(output);
+                            if (!acc[fmt]) acc[fmt] = [];
+                            acc[fmt].push(output);
+                            return acc;
+                        }, {});
+
+                        // Only show sections that have outputs
+                        const sectionsWithData = FORMAT_SECTIONS.filter(s => grouped[s.key]?.length > 0);
+                        const otherOutputs = grouped['other'] || [];
+
+                        return (
+                            <div className="space-y-10">
+                                {sectionsWithData.map(section => {
+                                    const SectionIcon = section.icon;
+                                    const sectionOutputs = grouped[section.key] || [];
+                                    return (
+                                        <div key={section.key} className="space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20">
+                                                    <SectionIcon className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-white">{section.label}</h3>
+                                                    <p className="text-xs text-gray-500">{section.ratio} · {sectionOutputs.length} {sectionOutputs.length === 1 ? 'diseño' : 'diseños'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                                {sectionOutputs.map((output) => (
+                                                    <motion.div
+                                                        key={output.id}
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        whileHover={{ scale: 1.02 }}
+                                                        onClick={() => setSelectedOutput(output)}
+                                                        onDoubleClick={() => setViewingAsset(output)}
+                                                        className={`relative ${section.aspect} rounded-xl overflow-hidden cursor-pointer border-2 border-white/10 hover:border-primary/50 transition-all shadow-lg group`}
+                                                    >
+                                                        <img
+                                                            src={output.publicUrl}
+                                                            alt={output.originalName}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                                                                <p className="text-xs text-gray-300">{formatDate(output.createdAt)}</p>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {otherOutputs.length > 0 && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
+                                                <ImageIcon className="w-5 h-5 text-gray-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white">Otros</h3>
+                                                <p className="text-xs text-gray-500">{otherOutputs.length} {otherOutputs.length === 1 ? 'diseño' : 'diseños'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            {otherOutputs.map((output) => (
+                                                <motion.div
+                                                    key={output.id}
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    onClick={() => setSelectedOutput(output)}
+                                                    onDoubleClick={() => setViewingAsset(output)}
+                                                    className="relative aspect-[9/16] rounded-xl overflow-hidden cursor-pointer border-2 border-white/10 hover:border-primary/50 transition-all shadow-lg group"
+                                                >
+                                                    <img
+                                                        src={output.publicUrl}
+                                                        alt={output.originalName}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                                                            <p className="text-xs text-gray-300">{formatDate(output.createdAt)}</p>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))}
                                         </div>
                                     </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    )}
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Output Preview Modal */}
                     {selectedOutput && (

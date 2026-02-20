@@ -173,7 +173,7 @@ export default function BusinessPage() {
 
             // 1. Upload logo if there is a pending file
             if (pendingLogoFile) {
-                const res = await apiService.uploadLogo(pendingLogoFile, accountId);
+                const res = await apiService.uploadLogo(pendingLogoFile, accountId, formData.id || undefined);
                 currentLogoUrl = res.publicUrl;
             }
 

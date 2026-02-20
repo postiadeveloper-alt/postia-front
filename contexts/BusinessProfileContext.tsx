@@ -48,11 +48,6 @@ export function BusinessProfileProvider({ children }: { children: ReactNode }) {
             setLoading(true);
             const data = await apiService.getBusinessProfiles();
             setBusinessProfiles(data || []);
-            
-            // Auto-select first profile if only one exists
-            if (data && data.length === 1) {
-                setSelectedProfile(data[0].instagramAccount.id);
-            }
         } catch (error) {
             console.error('Failed to load business profiles:', error);
             setBusinessProfiles([]);
