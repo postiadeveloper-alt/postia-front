@@ -51,6 +51,22 @@ export default function CreatePostPage() {
             setPreUploadedMediaUrl(studioMediaUrl);
             sessionStorage.removeItem('studioMediaUrl');
         }
+
+        // Check for strategy draft pre-fill
+        const strategyDraftRaw = sessionStorage.getItem('strategyDraft');
+        if (strategyDraftRaw) {
+            try {
+                const draft = JSON.parse(strategyDraftRaw);
+                if (draft.caption) setCaption(draft.caption);
+                if (draft.scheduledDate) setScheduledDate(draft.scheduledDate);
+                if (draft.scheduledTime) setScheduledTime(draft.scheduledTime);
+                if (draft.contentType) setContentType(draft.contentType);
+                if (draft.mediaUrl) setPreUploadedMediaUrl(draft.mediaUrl);
+            } catch (e) {
+                console.error('Failed to parse strategyDraft:', e);
+            }
+            sessionStorage.removeItem('strategyDraft');
+        }
     }, []);
 
     useEffect(() => {

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface GalleryOutput {
@@ -63,6 +64,7 @@ export default function ContentStrategyDetail({
     onConvertToPost,
     galleryOutputs = [],
 }: ContentStrategyDetailProps) {
+    const router = useRouter();
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -86,15 +88,35 @@ export default function ContentStrategyDetail({
     };
 
     const handleConvertClick = async () => {
-        if (!onConvertToPost) return;
-        setConverting(true);
-        try {
-            await onConvertToPost(strategy.id);
-        } catch (error) {
-            console.error('Failed to convert strategy:', error);
-        } finally {
-            setConverting(false);
-        }
+        const FORMAT_TO_CONTENT_TYPE: Record<string, string> = {
+            static_post: 'post',
+            story: 'story',
+            reel: 'reel',
+            carousel: 'carousel',
+        };
+
+        // Build caption: hook + main content + hashtags
+        const hashtagLine = strategy.hashtags?.length
+            ? '\n\n' + strategy.hashtags.map((t: string) => `#${t.replace('#', '')}`).join(' ')
+            : '';
+        const caption = [strategy.hook, strategy.mainContent].filter(Boolean).join('\n\n') + hashtagLine;
+
+        // Parse scheduled date/time
+        const dateObj = strategy.scheduledDate ? new Date(strategy.scheduledDate) : null;
+        const scheduledDate = dateObj ? dateObj.toISOString().split('T')[0] : '';
+        const scheduledTime = '09:00';
+
+        const draftData = {
+            caption,
+            scheduledDate,
+            scheduledTime,
+            contentType: FORMAT_TO_CONTENT_TYPE[strategy.format] || 'post',
+            mediaUrl: previewImage || matchingOutputs[0]?.publicUrl || null,
+        };
+
+        sessionStorage.setItem('strategyDraft', JSON.stringify(draftData));
+        onClose();
+        router.push('/dashboard/posts/create');
     };
 
     const handleCopy = async (text: string, field: string) => {
@@ -387,16 +409,16 @@ export default function ContentStrategyDetail({
                                 {deleting ? 'Eliminando...' : 'Eliminar'}
                             </button>
                         )}
-                        {onConvertToPost && (
+                        {onConvertToPost || true ? (
                             <button
                                 onClick={handleConvertClick}
-                                disabled={converting || deleting}
+                                disabled={deleting}
                                 className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-primary/25 disabled:opacity-50"
                             >
                                 <Send className="w-4 h-4" />
-                                {converting ? 'Programando...' : 'Programar Post'}
+                                Programar Post
                             </button>
-                        )}
+                        ) : null}
                     </div>
                 </motion.div>
             </motion.div>

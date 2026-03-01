@@ -58,10 +58,10 @@ export function Header() {
                                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
                                         {selectedBusinessProfile.brandName.charAt(0)}
                                     </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-medium">{selectedBusinessProfile.brandName}</p>
+                                    <div className="text-left min-w-0 max-w-[180px]">
+                                        <p className="text-sm font-medium truncate" title={selectedBusinessProfile.brandName}>{selectedBusinessProfile.brandName}</p>
                                         {selectedBusinessProfile.instagramAccount?.username && (
-                                            <p className="text-xs text-gray-400">@{selectedBusinessProfile.instagramAccount.username}</p>
+                                            <p className="text-xs text-gray-400 truncate" title={`@${selectedBusinessProfile.instagramAccount.username}`}>@{selectedBusinessProfile.instagramAccount.username}</p>
                                         )}
                                     </div>
                                 </>
@@ -115,9 +115,9 @@ export function Header() {
                                                     {profile.brandName.charAt(0)}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-medium truncate">{profile.brandName}</p>
+                                                    <p className="text-sm font-medium truncate" title={profile.brandName}>{profile.brandName}</p>
                                                     {profile.instagramAccount?.username && (
-                                                        <p className="text-xs text-gray-400 truncate">@{profile.instagramAccount.username}</p>
+                                                        <p className="text-xs text-gray-400 truncate" title={`@${profile.instagramAccount.username}`}>@{profile.instagramAccount.username}</p>
                                                     )}
                                                 </div>
                                             </button>
