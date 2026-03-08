@@ -13,6 +13,7 @@ interface GalleryOutput {
     originalName: string;
     publicUrl: string;
     createdAt: string;
+    targetEmotion?: string;
 }
 
 interface ContentStrategyDetailProps {
@@ -106,12 +107,18 @@ export default function ContentStrategyDetail({
         const scheduledDate = dateObj ? dateObj.toISOString().split('T')[0] : '';
         const scheduledTime = '09:00';
 
+        // For carousels, pass matching image URLs (max 4); for others, pass a single URL
+        const mediaUrls = strategy.format === 'carousel' && matchingOutputs.length > 0
+            ? matchingOutputs.slice(0, 4).map((o: GalleryOutput) => o.publicUrl)
+            : [];
+
         const draftData = {
             caption,
             scheduledDate,
             scheduledTime,
             contentType: FORMAT_TO_CONTENT_TYPE[strategy.format] || 'post',
-            mediaUrl: previewImage || matchingOutputs[0]?.publicUrl || null,
+            mediaUrl: strategy.format !== 'carousel' ? (previewImage || matchingOutputs[0]?.publicUrl || null) : null,
+            mediaUrls,
         };
 
         sessionStorage.setItem('strategyDraft', JSON.stringify(draftData));
@@ -130,10 +137,23 @@ export default function ContentStrategyDetail({
 
     // Filter gallery outputs that match this strategy's format
     const galleryKey = FORMAT_TO_GALLERY_KEY[strategy.format] || '';
-    const matchingOutputs = galleryOutputs.filter((output) => {
-        const match = output.originalName.match(/^generated_(story|reel|post|carousel)_/);
-        return match ? match[1] === galleryKey : false;
-    });
+    const matchingOutputs = (() => {
+        const formatMatches = galleryOutputs.filter((output) => {
+            const match = output.originalName.match(/^generated_(story|reel|post|carousel)_/);
+            return match ? match[1] === galleryKey : false;
+        });
+        // For carousels, show ONLY images matching the strategy's targetEmotion (max 4)
+        // Fall back to all format matches only if zero emotion matches exist
+        if (strategy.format === 'carousel' && strategy.targetEmotion && formatMatches.length > 0) {
+            const emotionMatches = formatMatches.filter(
+                (o) => o.targetEmotion && o.targetEmotion.toLowerCase() === strategy.targetEmotion.toLowerCase()
+            );
+            if (emotionMatches.length > 0) {
+                return emotionMatches.slice(0, 4);
+            }
+        }
+        return formatMatches;
+    })();
     const hasGalleryImages = matchingOutputs.length > 0;
     const formatGalleryLabel = FORMAT_GALLERY_LABELS[strategy.format] || strategy.format;
     
@@ -195,6 +215,11 @@ export default function ContentStrategyDetail({
                                 <ImageIcon className="w-5 h-5" />
                                 <span className="font-medium">Vista Previa Visual</span>
                                 <span className="text-sm text-gray-500">• Contenido de Galería para {formatGalleryLabel}</span>
+                                {strategy.format === 'carousel' && strategy.targetEmotion && hasGalleryImages && (
+                                    <span className="ml-1 px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full text-xs font-medium">
+                                        {strategy.targetEmotion}
+                                    </span>
+                                )}
                                 {galleryOutputs.length > 0 && (
                                     <button
                                         onClick={() => setShowGalleryPicker(p => !p)}
@@ -239,16 +264,39 @@ export default function ContentStrategyDetail({
                                 </div>
                             ) : hasGalleryImages ? (
                                 <div className="space-y-3">
-                                    {/* Main preview */}
-                                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/20">
-                                        <img
-                                            src={previewImage || matchingOutputs[0].publicUrl}
-                                            alt="Vista previa del contenido"
-                                            className="w-full max-h-80 object-contain mx-auto"
-                                        />
-                                    </div>
-                                    {/* Thumbnail strip if multiple images */}
-                                    {matchingOutputs.length > 1 && (
+                                    {/* For carousel: show all matching images side by side */}
+                                    {strategy.format === 'carousel' && matchingOutputs.length > 1 ? (
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            {matchingOutputs.map((output) => (
+                                                <div
+                                                    key={output.id}
+                                                    className={`relative aspect-[4/5] rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                                                        (previewImage || matchingOutputs[0].publicUrl) === output.publicUrl
+                                                            ? 'border-primary shadow-lg shadow-primary/30'
+                                                            : 'border-white/10 hover:border-white/30'
+                                                    }`}
+                                                    onClick={() => setPreviewImage(output.publicUrl)}
+                                                >
+                                                    <img
+                                                        src={output.publicUrl}
+                                                        alt={output.originalName}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        /* Single main preview for non-carousel or single image */
+                                        <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/20">
+                                            <img
+                                                src={previewImage || matchingOutputs[0].publicUrl}
+                                                alt="Vista previa del contenido"
+                                                className="w-full max-h-80 object-contain mx-auto"
+                                            />
+                                        </div>
+                                    )}
+                                    {/* Thumbnail strip for non-carousel with multiple images */}
+                                    {strategy.format !== 'carousel' && matchingOutputs.length > 1 && (
                                         <div className="flex gap-2 overflow-x-auto pb-2">
                                             {matchingOutputs.slice(0, 6).map((output) => (
                                                 <button
@@ -279,6 +327,7 @@ export default function ContentStrategyDetail({
                                     )}
                                     <p className="text-xs text-gray-500">
                                         {matchingOutputs.length} {matchingOutputs.length === 1 ? 'imagen disponible' : 'imágenes disponibles'} en la sección de {formatGalleryLabel}
+                                        {strategy.format === 'carousel' && strategy.targetEmotion ? ` (${strategy.targetEmotion})` : ''}
                                     </p>
                                 </div>
                             ) : (
@@ -297,73 +346,16 @@ export default function ContentStrategyDetail({
                             )}
                         </div>
 
-                        {/* Hook Section */}
-                        <Section
-                            icon={<Sparkles className="w-5 h-5" />}
-                            title="Gancho"
-                            subtitle="Línea de apertura para captar atención"
-                            content={strategy.hook}
-                            onCopy={() => handleCopy(strategy.hook, 'hook')}
-                            copied={copiedField === 'hook'}
-                        />
-
-                        {/* Main Content Section */}
+                        {/* Description / Main Content — always visible with images */}
                         <Section
                             icon={<FileText className="w-5 h-5" />}
-                            title="Contenido Principal"
+                            title="Descripción del Post/Carrusel"
                             subtitle="Caption/script completo"
                             content={strategy.mainContent}
                             onCopy={() => handleCopy(strategy.mainContent, 'mainContent')}
                             copied={copiedField === 'mainContent'}
                             multiline
                         />
-
-                        {/* Front Page Description */}
-                        <Section
-                            icon={<Eye className="w-5 h-5" />}
-                            title="Descripción de Portada"
-                            subtitle="Visual para imagen de portada"
-                            content={strategy.frontPageDescription}
-                            onCopy={() => handleCopy(strategy.frontPageDescription, 'frontPage')}
-                            copied={copiedField === 'frontPage'}
-                        />
-
-                        {/* Call to Action */}
-                        <Section
-                            icon={<Target className="w-5 h-5" />}
-                            title="Llamada a la Acción"
-                            content={strategy.callToAction}
-                            onCopy={() => handleCopy(strategy.callToAction, 'cta')}
-                            copied={copiedField === 'cta'}
-                        />
-
-                        {/* Hashtags */}
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-gray-400">
-                                <Hash className="w-5 h-5" />
-                                <span className="font-medium">Hashtags</span>
-                                <button
-                                    onClick={() => handleCopy(strategy.hashtags?.join(' ') || '', 'hashtags')}
-                                    className="ml-auto p-1 hover:bg-white/10 rounded transition-colors"
-                                >
-                                    {copiedField === 'hashtags' ? (
-                                        <Check className="w-4 h-4 text-green-400" />
-                                    ) : (
-                                        <Copy className="w-4 h-4" />
-                                    )}
-                                </button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {strategy.hashtags?.map((tag: string, index: number) => (
-                                    <span
-                                        key={index}
-                                        className="px-2 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-sm"
-                                    >
-                                        #{tag.replace('#', '')}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
 
                         {/* Strategy Details Grid */}
                         <div className="grid grid-cols-2 gap-4">
@@ -388,6 +380,70 @@ export default function ContentStrategyDetail({
                             onCopy={() => handleCopy(strategy.visualNotes, 'visualNotes')}
                             copied={copiedField === 'visualNotes'}
                         />
+
+                        {/* Separator */}
+                        <div className="border-t border-white/10 pt-4">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-4">Sugerencias de la IA para crear contenido</p>
+
+                            {/* Hook Suggestion */}
+                            <div className="space-y-4">
+                                <Section
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                    title="Sugerencia de Gancho"
+                                    subtitle="Línea de apertura para captar atención"
+                                    content={strategy.hook}
+                                    onCopy={() => handleCopy(strategy.hook, 'hook')}
+                                    copied={copiedField === 'hook'}
+                                />
+
+                                {/* Front Page Description Suggestion */}
+                                <Section
+                                    icon={<Eye className="w-5 h-5" />}
+                                    title="Sugerencia para Descripción de Portada"
+                                    subtitle="Visual para imagen de portada"
+                                    content={strategy.frontPageDescription}
+                                    onCopy={() => handleCopy(strategy.frontPageDescription, 'frontPage')}
+                                    copied={copiedField === 'frontPage'}
+                                />
+
+                                {/* Call to Action Suggestion */}
+                                <Section
+                                    icon={<Target className="w-5 h-5" />}
+                                    title="Sugerencia de Llamada a la Acción"
+                                    content={strategy.callToAction}
+                                    onCopy={() => handleCopy(strategy.callToAction, 'cta')}
+                                    copied={copiedField === 'cta'}
+                                />
+
+                                {/* Hashtags Suggestion */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                        <Hash className="w-5 h-5" />
+                                        <span className="font-medium">Sugerencia de Hashtags</span>
+                                        <button
+                                            onClick={() => handleCopy(strategy.hashtags?.join(' ') || '', 'hashtags')}
+                                            className="ml-auto p-1 hover:bg-white/10 rounded transition-colors"
+                                        >
+                                            {copiedField === 'hashtags' ? (
+                                                <Check className="w-4 h-4 text-green-400" />
+                                            ) : (
+                                                <Copy className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {strategy.hashtags?.map((tag: string, index: number) => (
+                                            <span
+                                                key={index}
+                                                className="px-2 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-sm"
+                                            >
+                                                #{tag.replace('#', '')}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Footer */}

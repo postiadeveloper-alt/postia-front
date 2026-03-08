@@ -61,7 +61,15 @@ export default function CreatePostPage() {
                 if (draft.scheduledDate) setScheduledDate(draft.scheduledDate);
                 if (draft.scheduledTime) setScheduledTime(draft.scheduledTime);
                 if (draft.contentType) setContentType(draft.contentType);
-                if (draft.mediaUrl) setPreUploadedMediaUrl(draft.mediaUrl);
+                // Support multiple media URLs for carousels
+                if (draft.mediaUrls && Array.isArray(draft.mediaUrls) && draft.mediaUrls.length > 0) {
+                    setPreUploadedMediaUrl(draft.mediaUrls[0]);
+                    if (draft.mediaUrls.length > 1) {
+                        setAdditionalRemoteUrls(draft.mediaUrls.slice(1));
+                    }
+                } else if (draft.mediaUrl) {
+                    setPreUploadedMediaUrl(draft.mediaUrl);
+                }
             } catch (e) {
                 console.error('Failed to parse strategyDraft:', e);
             }

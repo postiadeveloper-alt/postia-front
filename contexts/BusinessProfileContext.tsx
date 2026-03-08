@@ -17,6 +17,10 @@ interface BusinessProfile {
     industry?: string;
     description?: string;
     instagramAccount: InstagramAccount;
+    targetEmotions?: string[];
+    brandColors?: string[];
+    visualStyle?: string;
+    communicationTone?: string;
 }
 
 interface BusinessProfileContextType {

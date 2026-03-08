@@ -298,6 +298,13 @@ class ApiService {
             cropX: number;
             cropY: number;
             scale: number;
+            overlayText?: string;
+            overlayFont?: string;
+            overlayColor?: string;
+            overlayX?: number;
+            overlayY?: number;
+            overlaySize?: number;
+            targetEmotion?: string;
         },
         businessProfileId?: string,
     ) {
@@ -331,6 +338,11 @@ class ApiService {
         return response.data;
     }
 
+    async updateAssetEmotion(assetId: string, targetEmotion: string) {
+        const response = await this.api.patch(`/image-processing/${assetId}/emotion`, { targetEmotion });
+        return response.data;
+    }
+
     async uploadLogo(file: File, instagramAccountId: string, businessProfileId?: string) {
         const formData = new FormData();
         formData.append('file', file);
@@ -348,6 +360,60 @@ class ApiService {
         const response = await this.api.post('/image-processing/generate-ai-templates', {
             instagramAccountId,
             businessProfileId,
+        });
+        return response.data;
+    }
+
+    // Returns base64 PNG previews for all 6 template types — no GCS upload
+    async getTemplatesPreviews(primary: string, secondary: string): Promise<Array<{ name: string; label: string; dataUrl: string }>> {
+        const response = await this.api.get('/image-processing/templates/preview', {
+            params: { primary, secondary },
+        });
+        return response.data;
+    }
+
+    // Generate using an inline template blob (from a locally-generated preview template)
+    async generateImageWithFormatInline(
+        templateBlob: Blob,
+        contentPath: string,
+        formatSettings: {
+            format: 'story' | 'reel' | 'post' | 'carousel';
+            width: number;
+            height: number;
+            cropX: number;
+            cropY: number;
+            scale: number;
+            overlayText?: string;
+            overlayFont?: string;
+            overlayColor?: string;
+            overlayX?: number;
+            overlayY?: number;
+            overlaySize?: number;
+            targetEmotion?: string;
+        },
+        businessProfileId?: string,
+    ) {
+        const formData = new FormData();
+        formData.append('templateFile', templateBlob, 'template.png');
+        formData.append('contentPath', contentPath);
+        formData.append('format', formatSettings.format);
+        formData.append('width', String(formatSettings.width));
+        formData.append('height', String(formatSettings.height));
+        formData.append('cropX', String(formatSettings.cropX));
+        formData.append('cropY', String(formatSettings.cropY));
+        formData.append('scale', String(formatSettings.scale));
+        if (formatSettings.overlayText) formData.append('overlayText', formatSettings.overlayText);
+        if (formatSettings.overlayFont) formData.append('overlayFont', formatSettings.overlayFont);
+        if (formatSettings.overlayColor) formData.append('overlayColor', formatSettings.overlayColor);
+        if (formatSettings.overlayX != null) formData.append('overlayX', String(formatSettings.overlayX));
+        if (formatSettings.overlayY != null) formData.append('overlayY', String(formatSettings.overlayY));
+        if (formatSettings.overlaySize) formData.append('overlaySize', String(formatSettings.overlaySize));
+        if (formatSettings.targetEmotion) formData.append('targetEmotion', formatSettings.targetEmotion);
+        if (businessProfileId) formData.append('businessProfileId', businessProfileId);
+
+        const response = await this.api.post('/image-processing/generate-with-format-inline', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 120000,
         });
         return response.data;
     }

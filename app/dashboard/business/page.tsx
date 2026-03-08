@@ -13,6 +13,7 @@ interface BusinessProfileForm {
     industry: string;
     targetAudience: string;
     brandValues: string;
+    targetEmotions: string[];
     visualStyle: string;
     communicationTone: string;
     contentGuidelines: string;
@@ -29,6 +30,7 @@ const initialFormState: BusinessProfileForm = {
     industry: '',
     targetAudience: '',
     brandValues: '',
+    targetEmotions: [],
     visualStyle: '',
     communicationTone: '',
     contentGuidelines: '',
@@ -113,6 +115,7 @@ export default function BusinessPage() {
                         industry: profile.industry || '',
                         targetAudience: profile.targetAudience || '',
                         brandValues: profile.brandValues || '',
+                        targetEmotions: profile.targetEmotions || [],
                         visualStyle: profile.visualStyle || '',
                         communicationTone: profile.communicationTone || '',
                         contentGuidelines: profile.contentGuidelines || '',
@@ -204,6 +207,7 @@ export default function BusinessPage() {
 
             alert('¡Perfil del negocio guardado exitosamente!');
             loadData(); // Reload to get updated data
+            refreshProfiles(); // Refresh the global context so other pages see updated data
         } catch (error) {
             console.error('Error saving profile:', error);
             alert('Error al guardar el perfil.');
@@ -605,17 +609,41 @@ export default function BusinessPage() {
                             placeholder="Cualquier pauta específica..."
                         />
                     </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-300">Valores de Marca</label>
-                        <textarea
-                            name="brandValues"
-                            value={formData.brandValues}
-                            onChange={handleChange}
-                            rows={2}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary/50"
-                            placeholder="ej. Sostenibilidad, Innovación"
-                        />
-                    </div>
+                    {renderArrayInput('Emoción Objetivo', 'targetEmotions', 'Añadir emoción/ángulo (Presiona Enter)')}
+                    {/* Suggested emotions dropdown */}
+                    {(() => {
+                        const EMOTION_SUGGESTIONS = [
+                            'Curiosidad', 'Inspiración', 'Humor', 'Sorpresa', 'Identificación',
+                            'Motivación', 'Nostalgia', 'Urgencia', 'Confianza', 'Exclusividad',
+                            'Empoderamiento', 'Ternura', 'Rebeldía', 'Calma', 'Asombro',
+                            'Orgullo', 'Pertenencia', 'Deseo', 'Gratitud', 'Esperanza',
+                        ];
+                        const available = EMOTION_SUGGESTIONS.filter(
+                            (s) => !(formData.targetEmotions as string[]).some((t) => t.toLowerCase() === s.toLowerCase())
+                        );
+                        return available.length > 0 ? (
+                            <div className="space-y-1.5 -mt-1">
+                                <label className="block text-xs text-gray-500 ml-1">Sugerencias — hacé click para agregar:</label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {available.map((emotion) => (
+                                        <button
+                                            key={emotion}
+                                            type="button"
+                                            onClick={() => handleArrayAdd('targetEmotions', emotion)}
+                                            className="px-2.5 py-1 text-xs rounded-full border border-dashed border-white/15 text-gray-400 hover:text-purple-300 hover:border-purple-500/40 hover:bg-purple-500/10 transition-all"
+                                        >
+                                            + {emotion}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : null;
+                    })()}
+                    <p className="text-xs text-gray-500 -mt-1 ml-1">
+                        Definí los ángulos emocionales con los que se creará tu contenido. Cada emoción genera una dirección distinta para tus carruseles: 
+                        la IA usará estas etiquetas al crear estrategias, y en el Estudio Creativo tus imágenes de carrusel se organizarán 
+                        en subsecciones por emoción para que puedas combinar el visual correcto con cada contenido.
+                    </p>
                 </div>
 
                 <div className="flex justify-end">

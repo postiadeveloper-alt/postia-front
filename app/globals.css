@@ -48,3 +48,42 @@ body {
     overflow: hidden;
   }
 }
+
+/* Instagram-style zoom slider */
+.ig-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  outline: none;
+}
+
+.ig-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.ig-zoom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.ig-zoom-slider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+
+.ig-zoom-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
